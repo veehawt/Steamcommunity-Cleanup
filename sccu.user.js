@@ -1,8 +1,7 @@
-
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
-// @namespace    https://github.com/veehawt/Steamcommunity-CleanUp/
-// @version      0.1.0
+// @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
+// @version      0.2.0
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -12,6 +11,8 @@
 // @match        https://steamcommunity.com/app/*/tradingforum/*
 // @match        https://steamcommunity.com/app/*/eventcomments/*
 // @match        https://steamcommunity.com/discussions/forum/*
+// @match        https://steamcommunity.com/profiles/*
+// @match        https://steamcommunity.com/id/*
 // @grant        none
 // ==/UserScript==
 
@@ -81,6 +82,13 @@
     ];
 
     const scriptStyles = `
+        .add-nickname img.nickname-icon {
+            vertical-align: middle;
+            margin-left: 4px;
+            margin-right: -4px;
+            position: relative;
+            top: 1px;
+        }
         .custom-button {
             display: relative;
             border-radius: 2px;
@@ -244,6 +252,36 @@
         pageEndSpanFooter.textContent = visibleTopics;
     }
 
+
+
+    function addNickname(menu) {
+        if (!menu || menu.querySelector(".add-nickname")) return;
+
+        const blockBtn = menu.querySelector("a[href*='Forum_BlockUser']");
+
+        if (!blockBtn) return;
+
+        const blockHref = blockBtn.getAttribute("href");
+        const match = blockHref.match(/'(\d+)'/);
+        if (!match) return;
+
+        const userId = match[1];
+
+        const nicknameAdd = document.createElement("a");
+        nicknameAdd.className = "forum_comment_action add-nickname";
+        nicknameAdd.href = `https://steamcommunity.com/profiles/${userId}#addnickname`;
+        nicknameAdd.target = "_blank";
+        nicknameAdd.innerHTML = `
+        <img class="nickname-icon" src="https://community.fastly.steamstatic.com/public/images/skin_1/notification_icon_edit_bright.png">
+        Add Nickname
+        `;
+
+        if (blockBtn) {
+            blockBtn.insertAdjacentElement("afterend", nicknameAdd);
+        } else {
+            menu.appendChild(nicknameAdd);
+        }
+    }
 
 
     function filterTopics(showAll = false, showBlocked = false) {
@@ -523,6 +561,25 @@
     }
 
 
+    if (window.location.hash === "#addnickname" && typeof ShowNicknameModal === "function") {
+        const nicknameElement = document.querySelector(".nickname");
+        const existingNickname = nicknameElement ? nicknameElement.textContent.trim() : "";
+
+        ShowNicknameModal(); // Already defined by Steam
+
+        const nicknameObserver = new MutationObserver((mutations, obs) => {
+            const nicknameInput = document.querySelector(".newmodal input[type='text']");
+
+            if (nicknameInput) {
+                const match = existingNickname.match(/^\((.*)\)$/);
+                nicknameInput.value = match ? match[1] : existingNickname;
+
+                obs.disconnect();
+            }
+        });
+
+        nicknameObserver.observe(document.body, { childList: true, subtree: true });
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         setHeaderBtns();
@@ -539,14 +596,31 @@
     watchUrl();
     setVisibleCount();
 
-    const observer = new MutationObserver(() => {
-        filterTopics(
-            buttonManager.getHeaderAll(),
-            buttonManager.getHeaderBlocked(),
-            buttonManager.getFooterAll(),
-            buttonManager.getFooterBlocked()
-        );
-        setVisibleCount();
+    const observer = new MutationObserver((mutations) => {
+        let topicsChanged = false;
+
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.classList && node.classList.contains("forum_topic")) {
+                    topicsChanged = true;
+                }
+
+                if (node.classList && node.classList.contains("forum_comment_action_menu")) {
+                    addNickname(node);
+                }
+            });
+        });
+
+        if (topicsChanged) {
+            filterTopics(
+                buttonManager.getHeaderAll(),
+                buttonManager.getHeaderBlocked(),
+                buttonManager.getFooterAll(),
+                buttonManager.getFooterBlocked()
+            );
+            setVisibleCount();
+        }
     });
-    observer.observe(document.querySelector('.forum_topics'), { childList: true, subtree: true });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 })();
