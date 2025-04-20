@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.0
+// @version      0.3.1
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -66,13 +66,13 @@
         /[\u0E00-\u0E7F]/, // Thai
         /[\uAC00-\uD7AF\u1100-\u11FF]/, // Korean
         /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/, // Japanese
-        /[àảạằắẳẵặèẻẽẹềếểễệìỉĩịòỏõọồốổỗộờớởỡợùủũụưừứửữựỳỷỹỵđ]/i, // Vietnamese
+        /[ảạằắẳẵặỉĩịỏọồốổỗộờớởỡợủũụưừứửữựỷỹỵđ]/i, // Vietnamese
         /[\u0370-\u03FF]/, // Greek
         /[ğşşçıİĞŞÇ]/, // some Turkish characters aiming to hide Turkish topics
-        //[ÄäÖöÜü]/, // additional Turkish letters but also German, Estonian, Finnish and Hungarian
+        /[ÄäÖöÜü]/, // additional Turkish letters but also German, Estonian, Finnish and Hungarian
         /[ŐőŰű]/, // Hungarian
         /[Łł]/, // Polish
-        //[ÆæØøÅåÞþÐð]/, // Nordic (Danish, Finnish, Icelandic, Norwegian and Swedish)
+        /[ÆæØøÅåÞþÐð]/, // Nordic (Danish, Finnish, Icelandic, Norwegian and Swedish)
     ];
 
     const patternSpam = [
@@ -281,6 +281,8 @@
         });
     }
 
+    let lastHiddenCount = 0;
+
     function setVisibleCount() {
         const pageEndSpan = document.querySelector(
             'span[id^="forum_General_"][id$="_pageend"], ' +
@@ -296,19 +298,17 @@
         let totalCount = parseInt(pageEndSpan.textContent.trim()) || 0;
         let isCommentSection = document.querySelector('.commentthread_comment') !== null;
 
-        if (isCommentSection) {
-            let hiddenComments = document.querySelectorAll('.commentthread_comment[style="display: none;"]').length;
-            let visibleComments = Math.max(0, totalCount - hiddenComments);
+        let hiddenCount = isCommentSection
+        ? document.querySelectorAll('.commentthread_comment[style="display: none;"]').length
+        : document.querySelectorAll('.forum_topic[style="display: none;"]').length;
 
-            pageEndSpan.textContent = visibleComments;
-            pageEndSpanFooter.textContent = visibleComments;
+        if (hiddenCount !== lastHiddenCount) {
+            let visibleCount = Math.max(0, totalCount - hiddenCount);
 
-        } else {
-            let hiddenTopics = document.querySelectorAll('.forum_topic[style="display: none;"]').length;
-            let visibleTopics = Math.max(0, totalCount - hiddenTopics);
+            pageEndSpan.textContent = visibleCount;
+            pageEndSpanFooter.textContent = visibleCount;
 
-            pageEndSpan.textContent = visibleTopics;
-            pageEndSpanFooter.textContent = visibleTopics;
+            lastHiddenCount = hiddenCount;
         }
     }
 
@@ -710,6 +710,32 @@
     initCounts();
     watchUrl();
     setVisibleCount();
+
+
+    const observeMenuVisibility = () => {
+        document.querySelectorAll(".forum_comment_action_menu").forEach((menu) => {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === "style" && menu.style.display !== "none") {
+                        console.log("Menu became visible:", menu);
+                        addNickname(menu);
+                    }
+                });
+            });
+
+            observer.observe(menu, { attributes: true, attributeFilter: ["style"] });
+        });
+    };
+    observeMenuVisibility();
+
+
+    const menuContainer = document.body;
+    const menuObserver = new MutationObserver(() => {
+        observeMenuVisibility();
+    });
+
+    menuObserver.observe(menuContainer, { childList: true, subtree: true });
+
 
     const observer = new MutationObserver((mutations) => {
         let topicsChanged = false;
