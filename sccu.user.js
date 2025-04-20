@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.1
+// @version      0.3.2
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -423,61 +423,63 @@
         const sections = document.querySelectorAll(querySelector);
 
         sections.forEach((section) => {
-            if (section) {
-                const exSections = document.createElement('div');
-                exSections.className = `forum_paging forum_paging_${sectionType}_extended`;
-
-                const computedStyles = window.getComputedStyle(section);
-
-                exSections.style.position = 'relative';
-                exSections.style.display = 'flex';
-                exSections.style.justifyContent = 'space-between';
-                exSections.style.lineHeight = computedStyles.lineHeight;
-                exSections.style.height = computedStyles.height;
-                exSections.style.backgroundColor = computedStyles.backgroundColor;
-                exSections.style.borderBottomLeftRadius = computedStyles.borderBottomLeftRadius;
-                exSections.style.borderBottomRightRadius = computedStyles.borderBottomRightRadius;
-                exSections.style.color = computedStyles.color;
-                exSections.style.padding = computedStyles.padding;
-                exSections.style.margin = computedStyles.margin;
-
-                if (sectionType === 'header' || sectionType === 'pagectn') {
-                    section.style.borderBottomLeftRadius = '0';
-                    section.style.borderBottomRightRadius = '0';
-                    section.style.marginBottom = '0';
-
-                    exSections.style.borderTopLeftRadius = '0';
-                    exSections.style.borderTopRightRadius = '0';
-                    exSections.style.marginTop = '0';
-                } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
-                    section.style.borderTopLeftRadius = '0';
-                    section.style.borderTopRightRadius = '0';
-                    section.style.marginTop = '0';
-
-                    exSections.style.borderBottomLeftRadius = '0';
-                    exSections.style.borderBottomRightRadius = '0';
-                    exSections.style.marginBottom = '0';
-                }
-
-                if (sectionType === 'header' || sectionType === 'pagectn') {
-                    section.insertAdjacentElement('afterend', exSections);
-                } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
-                    section.insertAdjacentElement('beforebegin', exSections);
-                }
-
-                let buttonContainer;
-                if (sectionType === 'header' || sectionType === 'pagectn') {
-                    buttonContainer = createButtonContainer([allHeaderBtn, blockedHeaderBtn]);
-                } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
-                    buttonContainer = createButtonContainer([allFooterBtn, blockedFooterBtn]);
-                }
-
-                if (buttonContainer) {
-                    exSections.appendChild(buttonContainer);
-                }
-
-                setPagingCtrls(exSections, sectionType);
+            if (!section || window.getComputedStyle(section).display === 'none') {
+                return;
             }
+
+            const exSections = document.createElement('div');
+            exSections.className = `forum_paging forum_paging_${sectionType}_extended`;
+
+            const computedStyles = window.getComputedStyle(section);
+
+            exSections.style.position = 'relative';
+            exSections.style.display = 'flex';
+            exSections.style.justifyContent = 'space-between';
+            exSections.style.lineHeight = computedStyles.lineHeight;
+            exSections.style.height = computedStyles.height;
+            exSections.style.backgroundColor = computedStyles.backgroundColor;
+            exSections.style.borderBottomLeftRadius = computedStyles.borderBottomLeftRadius;
+            exSections.style.borderBottomRightRadius = computedStyles.borderBottomRightRadius;
+            exSections.style.color = computedStyles.color;
+            exSections.style.padding = computedStyles.padding;
+            exSections.style.margin = computedStyles.margin;
+
+            if (sectionType === 'header' || sectionType === 'pagectn') {
+                section.style.borderBottomLeftRadius = '0';
+                section.style.borderBottomRightRadius = '0';
+                section.style.marginBottom = '0';
+
+                exSections.style.borderTopLeftRadius = '0';
+                exSections.style.borderTopRightRadius = '0';
+                exSections.style.marginTop = '0';
+            } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
+                section.style.borderTopLeftRadius = '0';
+                section.style.borderTopRightRadius = '0';
+                section.style.marginTop = '0';
+
+                exSections.style.borderBottomLeftRadius = '0';
+                exSections.style.borderBottomRightRadius = '0';
+                exSections.style.marginBottom = '0';
+            }
+
+            if (sectionType === 'header' || sectionType === 'pagectn') {
+                section.insertAdjacentElement('afterend', exSections);
+            } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
+                section.insertAdjacentElement('beforebegin', exSections);
+            }
+
+            let buttonContainer;
+            if (sectionType === 'header' || sectionType === 'pagectn') {
+                buttonContainer = createButtonContainer([allHeaderBtn, blockedHeaderBtn]);
+            } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
+                buttonContainer = createButtonContainer([allFooterBtn, blockedFooterBtn]);
+            }
+
+            if (buttonContainer) {
+                exSections.appendChild(buttonContainer);
+            }
+
+            setPagingCtrls(exSections, sectionType);
         });
     }
 
