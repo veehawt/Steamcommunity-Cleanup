@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.2
+// @version      0.3.3
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -41,7 +41,7 @@
     ];
 
     // Regex trade patterns in topic titles to hide (disabled on trade forums)
-    const patternTrade = [
+    const regexTrade = [
         /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bg\s*i\s*v\s*e\s*a\s*w\s*a\s*y\b))[^\w\s]*\b/i, // most common iterations of "free giveaway"
         /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bp\s*o+\s*i\s*n\s*t\s*s\b))[^\w\s]*\b/i, // "free points"
         /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bs\s*k(?:i|\|)n\s*s\b))[^\w\s]*\b/i, // "free skins"
@@ -56,7 +56,7 @@
     ];
 
     // Regex language patterns in topic titles and topic comments to hide (disabled on trade forums)
-    const patternLang = [
+    const regexLanguage = [
         //[A-Za-z]+/, // English and the basic Latin alphabet
         /[\u0400-\u04FF]/, // Cyrillic (Ukrainian, Russian, Bulgarian, Serbian and more)
         /[\u0600-\u06FF]/, // Arabic
@@ -75,7 +75,7 @@
         /[ÆæØøÅåÞþÐð]/, // Nordic (Danish, Finnish, Icelandic, Norwegian and Swedish)
     ];
 
-    const patternSpam = [
+    const regexSpam = [
         /[\+\-]?\s*rep\s*(for\s*[\+\-]?\s*rep|\bme\b)?\b/i, // +rep for rep
         /\bcomment\s+for\s+comment\b/, // comment for comment
     ];
@@ -88,8 +88,8 @@
             position: relative;
             top: 1px;
         }
-        .custom-button {
-            display: relative;
+        .header_all, .header_blocked, .footer_all, .footer_blocked {
+            display: inline-block;
             border-radius: 2px;
             border: none;
             width: 112px;
@@ -101,26 +101,26 @@
             color: #67c1f5 !important;
             line-height: 17px;
         }
-        .custom-button.active {
+        .header_all.active, .header_blocked.active, .footer_all.active, .footer_blocked.active {
             box-shadow: 0 0 2px #417a9b, 0 0 10px #417a9b;
             background: #549EC8
             background: -webkit-linear-gradient( 150deg, #417a9b 5%, #549EC8 95%);
             background: linear-gradient( -60deg, #417a9b 5%, #549EC8 95%);
             color: #fff !important;
         }
-        .custom-button:hover {
+        .header_all:hover, .header_blocked:hover, .footer_all:hover, .footer_blocked:hover {
             background: #417a9b;
             background: -webkit-linear-gradient( 150deg, #417a9b 5%,#67c1f5 95%);
             background: linear-gradient( -60deg, #417a9b 5%, #67c1f5 95%);
             color: #fff !important;
         }
-        .hidden-pattern-keyword {
+        .hidden-filtered {
             background-color: rgba(118, 85, 116, 0.5);
         }
-        .hidden-pattern-keyword:hover {
+        .hidden-filtered:hover {
             background-color: rgba(141, 102, 139, 0.8);
         }
-        .hidden-pattern-keyword-comment {
+        .hidden-filtered-comment {
             background-color: rgba(67, 47, 67, 0.5) !important;
         }
         .hidden-blocked-user {
@@ -141,6 +141,9 @@
     document.head.appendChild(styleSheet);
 
     const TradingForum = window.location.href.includes('/tradingforum/');
+    let isCommentSection = document.querySelector('.commentthread_comment_container') !== null; 
+    let regexFilters = TradingForum ? regexSpam : [...regexTrade, ...regexLanguage, ...regexSpam];
+    let regexFiltersComments = [...regexLanguage, ...regexSpam];
 
 
 
@@ -158,15 +161,15 @@
 
 
 
-    function matchesCriteria(text, keywordList, patternList) {
+    function matchesCriteria(text, keywordList, regexList) {
         for (let keyword of keywordList) {
             if (text.toLowerCase().includes(keyword.toLowerCase())) {
                 return true;
             }
         }
 
-        for (let pattern of patternList) {
-            if (pattern.test(text)) {
+        for (let regex of regexList) {
+            if (regex.test(text)) {
                 return true;
             }
         }
@@ -176,11 +179,7 @@
 
     function countHiddenContent() {
         let blockedCount = 0;
-        let patkeyCount = 0;
-
-        let combinedPatterns = TradingForum ? patternSpam : [...patternTrade, ...patternLang, ...patternSpam];
-
-        let isCommentSection = !!document.querySelector('.commentthread_comments');
+        let filteredCount = 0;
 
         if (!isCommentSection) {
             let topics = document.querySelectorAll('.forum_topic');
@@ -193,16 +192,14 @@
 
                 let text = topicName.textContent.trim();
                 let isBlockedTopic = matchesCriteria(text, blocked, []);
-                let isPatKeyTopic = matchesCriteria(text, keywords, combinedPatterns);
+                let isFilteredTopic = matchesCriteria(text, keywords, regexFilters);
 
                 if (isBlockedTopic) blockedCount++;
-                if (isPatKeyTopic) patkeyCount++;
+                if (isFilteredTopic) filteredCount++;
             });
 
         } else {
             let comments = document.querySelectorAll('.commentthread_comment');
-
-            let commentPatterns = [...patternLang, ...patternSpam];
 
             comments.forEach(comment => {
                 let textElement = comment.querySelector('.commentthread_comment_text');
@@ -219,17 +216,17 @@
                     return;
                 }
 
-                let isPatKeyComment = matchesCriteria(cleanedText, [], commentPatterns);
+                let isFilteredComment = matchesCriteria(cleanedText, [], regexFiltersComments);
 
-                if (isPatKeyComment) {
-                    patkeyCount++;
+                if (isFilteredComment) {
+                    filteredCount++;
                 }
             });
         }
-        return { blockedCount, patkeyCount };
+        return { blockedCount, filteredCount: filteredCount };
     }
 
-    function displayCount(blockedCount, patkeyCount) {
+    function displayCount(blockedCount, filteredCount) {
         const pagingSummaries = document.querySelectorAll('.forum_paging_summary.ellipsis');
 
         pagingSummaries.forEach(pagingSummary => {
@@ -241,11 +238,11 @@
                 if (blockedCount > 0) {
                     displayText += `${blockedCount} from blocked users`;
                 }
-                if (patkeyCount > 0 && blockedCount > 0) {
+                if (filteredCount > 0 && blockedCount > 0) {
                     displayText += ', ';
                 }
-                if (patkeyCount > 0) {
-                    displayText += `${patkeyCount} spam`;
+                if (filteredCount > 0) {
+                    displayText += `${filteredCount} filtered`;
                 }
 
                 countDisplay.textContent = displayText === '' ? '' : ` (${displayText})`;
@@ -258,11 +255,11 @@
                 if (blockedCount > 0) {
                     displayText += `${blockedCount} from blocked users`;
                 }
-                if (patkeyCount > 0 && blockedCount > 0) {
+                if (filteredCount > 0 && blockedCount > 0) {
                     displayText += ', ';
                 }
-                if (patkeyCount > 0) {
-                    displayText += `${patkeyCount} spam`;
+                if (filteredCount > 0) {
+                    displayText += `${filteredCount} filtered`;
                 }
 
                 newCountDisplay.textContent = displayText === '' ? '' : ` (${displayText})`;
@@ -296,8 +293,6 @@
         if (!pageEndSpan || !pageEndSpanFooter) return;
 
         let totalCount = parseInt(pageEndSpan.textContent.trim()) || 0;
-        let isCommentSection = document.querySelector('.commentthread_comment') !== null;
-
         let hiddenCount = isCommentSection
         ? document.querySelectorAll('.commentthread_comment[style="display: none;"]').length
         : document.querySelectorAll('.forum_topic[style="display: none;"]').length;
@@ -315,10 +310,9 @@
 
 
     function addNickname(menu) {
-        if (!menu || menu.querySelector(".add-nickname")) return;
+        if (!menu || menu.querySelector(".nickname")) return;
 
         const blockBtn = menu.querySelector("a[href*='Forum_BlockUser']");
-
         if (!blockBtn) return;
 
         const blockHref = blockBtn.getAttribute("href");
@@ -327,19 +321,19 @@
 
         const userId = match[1];
 
-        const nicknameAdd = document.createElement("a");
-        nicknameAdd.className = "forum_comment_action add-nickname";
-        nicknameAdd.href = `https://steamcommunity.com/profiles/${userId}#addnickname`;
-        nicknameAdd.target = "_blank";
-        nicknameAdd.innerHTML = `
+        const nicknameTooltip = document.createElement("a");
+        nicknameTooltip.className = "forum_comment_action nickname tooltip";
+        nicknameTooltip.href = `https://steamcommunity.com/profiles/${userId}#addnickname`;
+        nicknameTooltip.target = "_blank";
+        nicknameTooltip.innerHTML = `
         <img class="nickname-icon" src="https://community.fastly.steamstatic.com/public/images/skin_1/notification_icon_edit_bright.png">
         Add Nickname
         `;
 
         if (blockBtn) {
-            blockBtn.insertAdjacentElement("afterend", nicknameAdd);
+            blockBtn.insertAdjacentElement("afterend", nicknameTooltip);
         } else {
-            menu.appendChild(nicknameAdd);
+            menu.appendChild(nicknameTooltip);
         }
     }
 
@@ -350,22 +344,20 @@
             let title = topic.textContent.trim();
             let topicElement = topic.closest('.forum_topic');
 
-            let combinedPatterns = TradingForum ? patternSpam : [...patternTrade, ...patternLang, ...patternSpam];
+            let isBlockedTopic = matchesCriteria(title, blocked, []);
+            let isFilteredTopic  = matchesCriteria(title, keywords, regexFilters);
 
-            let isBlocked = matchesCriteria(title, blocked, []);
-            let isPatKey = matchesCriteria(title, keywords, combinedPatterns);
+            topicElement.classList.remove('hidden-blocked-user', 'hidden-filtered');
 
-            topicElement.classList.remove('hidden-blocked-user', 'hidden-pattern-keyword');
-
-            if (isBlocked) {
+            if (isBlockedTopic) {
                 topicElement.style.display = showAll || showBlocked ? '' : 'none';
                 if (showAll || showBlocked) topicElement.classList.add('hidden-blocked-user');
                 return;
             }
 
-            if (isPatKey) {
+            if (isFilteredTopic ) {
                 topicElement.style.display = showAll ? '' : 'none';
-                if (showAll) topicElement.classList.add('hidden-pattern-keyword');
+                if (showAll) topicElement.classList.add('hidden-filtered');
                 return;
             }
 
@@ -389,12 +381,11 @@
             let textClone = textElement.cloneNode(true);
             textClone.querySelectorAll('blockquote').forEach(blockquote => blockquote.remove());
             let text = textClone.textContent.trim();
-            let commentPatterns = [...patternLang, ...patternSpam];
 
             let isBlockedComment = comment.classList.contains('commentthread_deleted_expanded');
-            let isPatKeyComment = matchesCriteria(text, [], commentPatterns);
+            let isFilteredComment = matchesCriteria(text, [], regexFiltersComments);
 
-            comment.classList.remove('hidden-blocked-user-comment', 'hidden-pattern-keyword-comment');
+            comment.classList.remove('hidden-blocked-user-comment', 'hidden-filtered-comment');
 
             if (isBlockedComment) {
                 comment.style.display = showAll || showBlocked ? '' : 'none';
@@ -402,9 +393,9 @@
                 return;
             }
 
-            if (isPatKeyComment) {
+            if (isFilteredComment) {
                 comment.style.display = showAll ? '' : 'none';
-                if (showAll) comment.classList.add('hidden-pattern-keyword-comment');
+                if (showAll) comment.classList.add('hidden-filtered-comment');
                 return;
             }
 
@@ -470,9 +461,9 @@
 
             let buttonContainer;
             if (sectionType === 'header' || sectionType === 'pagectn') {
-                buttonContainer = createButtonContainer([allHeaderBtn, blockedHeaderBtn]);
+                buttonContainer = createButtonContainer([headerBtnAll, headerBtnBlocked]);
             } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
-                buttonContainer = createButtonContainer([allFooterBtn, blockedFooterBtn]);
+                buttonContainer = createButtonContainer([footerBtnAll, footerBtnBlocked]);
             }
 
             if (buttonContainer) {
@@ -561,15 +552,15 @@
             toggleHeaderAll() {
                 if (!showHeaderAll) {
                     showHeaderBlocked = false;
-                    blockedHeaderBtn.classList.remove('active');
+                    headerBtnBlocked.classList.remove('active');
                     showFooterBlocked = false;
-                    blockedFooterBtn.classList.remove('active');
+                    footerBtnBlocked.classList.remove('active');
                 }
 
                 showHeaderAll = !showHeaderAll;
-                allHeaderBtn.classList.toggle('active', showHeaderAll);
+                headerBtnAll.classList.toggle('active', showHeaderAll);
                 showFooterAll = showHeaderAll;
-                allFooterBtn.classList.toggle('active', showFooterAll);
+                footerBtnAll.classList.toggle('active', showFooterAll);
 
                 applyFilters();
             },
@@ -577,15 +568,15 @@
             toggleHeaderBlocked() {
                 if (!showHeaderBlocked) {
                     showHeaderAll = false;
-                    allHeaderBtn.classList.remove('active');
+                    headerBtnAll.classList.remove('active');
                     showFooterAll = false;
-                    allFooterBtn.classList.remove('active');
+                    footerBtnAll.classList.remove('active');
                 }
 
                 showHeaderBlocked = !showHeaderBlocked;
-                blockedHeaderBtn.classList.toggle('active', showHeaderBlocked);
+                headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
                 showFooterBlocked = showHeaderBlocked;
-                blockedFooterBtn.classList.toggle('active', showFooterBlocked);
+                footerBtnBlocked.classList.toggle('active', showFooterBlocked);
 
                 applyFilters();
             },
@@ -593,15 +584,15 @@
             toggleFooterAll() {
                 if (!showFooterAll) {
                     showFooterBlocked = false;
-                    blockedFooterBtn.classList.remove('active');
+                    footerBtnBlocked.classList.remove('active');
                     showHeaderBlocked = false;
-                    blockedHeaderBtn.classList.remove('active');
+                    headerBtnBlocked.classList.remove('active');
                 }
 
                 showFooterAll = !showFooterAll;
-                allFooterBtn.classList.toggle('active', showFooterAll);
+                footerBtnAll.classList.toggle('active', showFooterAll);
                 showHeaderAll = showFooterAll;
-                allHeaderBtn.classList.toggle('active', showHeaderAll);
+                headerBtnAll.classList.toggle('active', showHeaderAll);
 
                 applyFilters();
             },
@@ -609,15 +600,15 @@
             toggleFooterBlocked() {
                 if (!showFooterBlocked) {
                     showFooterAll = false;
-                    allFooterBtn.classList.remove('active');
+                    footerBtnAll.classList.remove('active');
                     showHeaderAll = false;
-                    allHeaderBtn.classList.remove('active');
+                    headerBtnAll.classList.remove('active');
                 }
 
                 showFooterBlocked = !showFooterBlocked;
-                blockedFooterBtn.classList.toggle('active', showFooterBlocked);
+                footerBtnBlocked.classList.toggle('active', showFooterBlocked);
                 showHeaderBlocked = showFooterBlocked;
-                blockedHeaderBtn.classList.toggle('active', showHeaderBlocked);
+                headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
 
                 applyFilters();
             },
@@ -646,11 +637,11 @@
         return button;
     }
 
-    const allHeaderBtn = createButton('All', 'custom-button', buttonManager.toggleHeaderAll);
-    const blockedHeaderBtn = createButton('Blocked', 'custom-button', buttonManager.toggleHeaderBlocked);
+    const headerBtnAll = createButton('All', 'header_all', buttonManager.toggleHeaderAll);
+    const headerBtnBlocked = createButton('Blocked', 'header_blocked', buttonManager.toggleHeaderBlocked);
 
-    const allFooterBtn = createButton('All', 'custom-button', buttonManager.toggleFooterAll);
-    const blockedFooterBtn = createButton('Blocked', 'custom-button', buttonManager.toggleFooterBlocked);
+    const footerBtnAll = createButton('All', 'footer_all', buttonManager.toggleFooterAll);
+    const footerBtnBlocked = createButton('Blocked', 'footer_blocked', buttonManager.toggleFooterBlocked);
 
     let buttonContainerHeader;
     let buttonContainerFooter;
@@ -670,8 +661,8 @@
 
 
     function initCounts() {
-        const { blockedCount, patkeyCount } = countHiddenContent();
-        displayCount(blockedCount, patkeyCount);
+        const { blockedCount, filteredCount: filteredCount } = countHiddenContent();
+        displayCount(blockedCount, filteredCount);
     }
 
 
@@ -714,7 +705,7 @@
     setVisibleCount();
 
 
-    const observeMenuVisibility = () => {
+    const observeActionMenu = () => {
         document.querySelectorAll(".forum_comment_action_menu").forEach((menu) => {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
@@ -728,12 +719,12 @@
             observer.observe(menu, { attributes: true, attributeFilter: ["style"] });
         });
     };
-    observeMenuVisibility();
+    observeActionMenu();
 
 
     const menuContainer = document.body;
     const menuObserver = new MutationObserver(() => {
-        observeMenuVisibility();
+        observeActionMenu();
     });
 
     menuObserver.observe(menuContainer, { childList: true, subtree: true });
@@ -780,14 +771,14 @@
         setVisibleCount();
     });
 
-    const forumContainer = document.querySelector('.forum_topics_container');
-    const commentSection = document.querySelector('.commentthread_comment_container');
+    const topicContainer = document.querySelector('.forum_topics_container');
+    const commentContainer = document.querySelector('.commentthread_comment_container');
 
-    if (forumContainer) {
-        observer.observe(forumContainer, { childList: true, subtree: true });
+    if (topicContainer) {
+        observer.observe(topicContainer, { childList: true, subtree: true });
     }
 
-    if (commentSection) {
-        observer.observe(commentSection, { childList: true, subtree: true });
+    if (commentContainer) {
+        observer.observe(commentContainer, { childList: true, subtree: true });
     }
 })();
