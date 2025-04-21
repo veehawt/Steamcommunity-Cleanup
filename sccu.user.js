@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.5
+// @version      0.3.6
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -186,11 +186,11 @@
     styleSheet.innerText = scriptStyles;
     document.head.appendChild(styleSheet);
 
-    let lastHiddenCount = 0;
     const TradingForum = window.location.href.includes('/tradingforum/');
     let isCommentSection = document.querySelector('.commentthread_comment_container') !== null;
     let regexFilters = TradingForum ? regexSpam : [...regexTrade, ...regexLanguage, ...regexSpam];
     let regexFiltersComments = [...regexLanguage, ...regexSpam];
+
     const buttonManager = createButtonStateManager();
     let headerBtnAll, footerBtnAll, headerBtnBlocked, footerBtnBlocked;
     let buttonContainerHeader, buttonContainerFooter;
@@ -327,6 +327,8 @@
             }
         });
     }
+
+    let lastHiddenCount = 0;
 
     function setVisibleCount() {
         const pageEndSpan = document.querySelector(
@@ -486,66 +488,66 @@
     }
 
     function createButtonStateManager() {
-        let showHeaderAll = false;
-        let showFooterAll = false;
-        let showHeaderBlocked = false;
-        let showFooterBlocked = false;
+        let showAllHeader = false;
+        let showAllFooter = false;
+        let showBlockedHeader = false;
+        let showBlockedFooter = false;
 
         function applyFilters() {
-            filterTopics(showHeaderAll, showHeaderBlocked);
-            filterComments(showHeaderAll, showHeaderBlocked);
+            filterTopics(showAllHeader, showBlockedHeader);
+            filterComments(showAllHeader, showBlockedHeader);
         }
 
         function toggleState(buttonType, stateType) {
             if (!stateType) {
                 if (buttonType === 'header') {
-                    showHeaderBlocked = false;
+                    showBlockedHeader = false;
                     headerBtnBlocked.classList.remove('active');
-                    showFooterBlocked = false;
+                    showBlockedFooter = false;
                     footerBtnBlocked.classList.remove('active');
                 } else if (buttonType === 'footer') {
-                    showFooterBlocked = false;
+                    showBlockedFooter = false;
                     footerBtnBlocked.classList.remove('active');
-                    showHeaderBlocked = false;
+                    showBlockedHeader = false;
                     headerBtnBlocked.classList.remove('active');
                 }
             } else {
                 if (buttonType === 'header') {
-                    showHeaderAll = false;
+                    showAllHeader = false;
                     headerBtnAll.classList.remove('active');
-                    showFooterAll = false;
+                    showAllFooter = false;
                     footerBtnAll.classList.remove('active');
                 } else if (buttonType === 'footer') {
-                    showFooterAll = false;
+                    showAllFooter = false;
                     footerBtnAll.classList.remove('active');
-                    showHeaderAll = false;
+                    showAllHeader = false;
                     headerBtnAll.classList.remove('active');
                 }
             }
 
             if (buttonType === 'header') {
                 if (stateType) {
-                    showHeaderBlocked = !showHeaderBlocked;
-                    headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
-                    showFooterBlocked = showHeaderBlocked;
-                    footerBtnBlocked.classList.toggle('active', showFooterBlocked);
+                    showBlockedHeader = !showBlockedHeader;
+                    headerBtnBlocked.classList.toggle('active', showBlockedHeader);
+                    showBlockedFooter = showBlockedHeader;
+                    footerBtnBlocked.classList.toggle('active', showBlockedFooter);
                 } else {
-                    showHeaderAll = !showHeaderAll;
-                    headerBtnAll.classList.toggle('active', showHeaderAll);
-                    showFooterAll = showHeaderAll;
-                    footerBtnAll.classList.toggle('active', showFooterAll);
+                    showAllHeader = !showAllHeader;
+                    headerBtnAll.classList.toggle('active', showAllHeader);
+                    showAllFooter = showAllHeader;
+                    footerBtnAll.classList.toggle('active', showAllFooter);
                 }
             } else if (buttonType === 'footer') {
                 if (stateType) {
-                    showFooterBlocked = !showFooterBlocked;
-                    footerBtnBlocked.classList.toggle('active', showFooterBlocked);
-                    showHeaderBlocked = showFooterBlocked;
-                    headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
+                    showBlockedFooter = !showBlockedFooter;
+                    footerBtnBlocked.classList.toggle('active', showBlockedFooter);
+                    showBlockedHeader = showBlockedFooter;
+                    headerBtnBlocked.classList.toggle('active', showBlockedHeader);
                 } else {
-                    showFooterAll = !showFooterAll;
-                    footerBtnAll.classList.toggle('active', showFooterAll);
-                    showHeaderAll = showFooterAll;
-                    headerBtnAll.classList.toggle('active', showHeaderAll);
+                    showAllFooter = !showAllFooter;
+                    footerBtnAll.classList.toggle('active', showAllFooter);
+                    showAllHeader = showAllFooter;
+                    headerBtnAll.classList.toggle('active', showAllHeader);
                 }
             }
 
@@ -557,10 +559,10 @@
             toggleHeaderBlocked: () => toggleState('header', true),
             toggleFooterAll: () => toggleState('footer', false),
             toggleFooterBlocked: () => toggleState('footer', true),
-            getHeaderAll: () => showHeaderAll,
-            getHeaderBlocked: () => showHeaderBlocked,
-            getFooterAll: () => showFooterAll,
-            getFooterBlocked: () => showFooterBlocked
+            getHeaderAll: () => showAllHeader,
+            getHeaderBlocked: () => showBlockedHeader,
+            getFooterAll: () => showAllFooter,
+            getFooterBlocked: () => showBlockedFooter
         };
     }
 
@@ -697,7 +699,6 @@
 
 
     const observedMenus = new WeakSet();
-
     const observeActionMenu = () => {
         document.querySelectorAll(".forum_comment_action_menu").forEach((menu) => {
             if (observedMenus.has(menu)) return;
@@ -756,15 +757,15 @@
         setVisibleCount();
     });
 
-    const topicContainer = document.querySelector('.forum_topics_container');
-    const commentContainer = document.querySelector('.commentthread_comment_container');
+    const isForum = document.querySelector('.forum_topics_container');
+    const isDiscussion = document.querySelector('.commentthread_comment_container');
 
-    if (topicContainer) {
-        observer.observe(topicContainer, { childList: true, subtree: true });
+    if (isForum) {
+        observer.observe(isForum, { childList: true, subtree: true });
     }
 
-    if (commentContainer) {
-        observer.observe(commentContainer, { childList: true, subtree: true });
+    if (isDiscussion) {
+        observer.observe(isDiscussion, { childList: true, subtree: true });
     }
 
     initButtons();
