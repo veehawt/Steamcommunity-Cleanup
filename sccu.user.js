@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.3
+// @version      0.3.4
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -81,10 +81,10 @@
     ];
 
     const scriptStyles = `
-        .add-nickname img.nickname-icon {
+        .nickname img.nickname-icon {
             vertical-align: middle;
             margin-left: 4px;
-            margin-right: -4px;
+            margin-right: -2px;
             position: relative;
             top: 1px;
         }
@@ -134,16 +134,59 @@
         .hidden-blocked-user-comment {
             background-color: #2b2230 !important;
         }
+        .forum_paging_extended {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            line-height: 25px;
+            height: 25px;
+            background-color: rgba(21, 31, 44, 0.7);
+            color: #56707f;
+            padding: 0px 6px;
+        }
+        .forum_paging_header_extended,
+        .forum_paging_pagectn_extended {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            border-bottom-left-radius: 3px;
+            border-bottom-right-radius: 3px;
+            margin-top: 0;
+            margin-bottom: 2px;
+        }
+        .forum_paging_footer,
+        .forum_paging_fpagectn {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            margin-top: 0;
+            margin-bottom: 2px;
+        }
+        .forum_paging_footer_extended,
+        .forum_paging_fpagectn_extended {
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-top: 2px;
+            margin-bottom: 0;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+        }
     `;
 
     const styleSheet = document.createElement("style");
     styleSheet.innerText = scriptStyles;
     document.head.appendChild(styleSheet);
 
+    let lastHiddenCount = 0;
     const TradingForum = window.location.href.includes('/tradingforum/');
-    let isCommentSection = document.querySelector('.commentthread_comment_container') !== null; 
+    let isCommentSection = document.querySelector('.commentthread_comment_container') !== null;
     let regexFilters = TradingForum ? regexSpam : [...regexTrade, ...regexLanguage, ...regexSpam];
     let regexFiltersComments = [...regexLanguage, ...regexSpam];
+    const buttonManager = createButtonStateManager();
+    let headerBtnAll, footerBtnAll, headerBtnBlocked, footerBtnBlocked;
+    let buttonContainerHeader, buttonContainerFooter;
 
 
 
@@ -278,8 +321,6 @@
         });
     }
 
-    let lastHiddenCount = 0;
-
     function setVisibleCount() {
         const pageEndSpan = document.querySelector(
             'span[id^="forum_General_"][id$="_pageend"], ' +
@@ -345,7 +386,7 @@
             let topicElement = topic.closest('.forum_topic');
 
             let isBlockedTopic = matchesCriteria(title, blocked, []);
-            let isFilteredTopic  = matchesCriteria(title, keywords, regexFilters);
+            let isFilteredTopic = matchesCriteria(title, keywords, regexFilters);
 
             topicElement.classList.remove('hidden-blocked-user', 'hidden-filtered');
 
@@ -355,7 +396,7 @@
                 return;
             }
 
-            if (isFilteredTopic ) {
+            if (isFilteredTopic) {
                 topicElement.style.display = showAll ? '' : 'none';
                 if (showAll) topicElement.classList.add('hidden-filtered');
                 return;
@@ -404,54 +445,138 @@
         initCounts();
     }
 
+
+
+    function createButton(text, className, onClickHandler) {
+        const button = document.createElement('button');
+        button.innerText = text;
+        button.className = className;
+        button.addEventListener('click', onClickHandler);
+        return button;
+    }
+
+    function initButtons() {
+        headerBtnAll = createButton('All', 'header_all', buttonManager.toggleHeaderAll);
+        headerBtnBlocked = createButton('Blocked', 'header_blocked', buttonManager.toggleHeaderBlocked);
+        footerBtnAll = createButton('All', 'footer_all', buttonManager.toggleFooterAll);
+        footerBtnBlocked = createButton('Blocked', 'footer_blocked', buttonManager.toggleFooterBlocked);
+
+        buttonContainerHeader = createButtonContainer([headerBtnAll, headerBtnBlocked]);
+        buttonContainerFooter = createButtonContainer([footerBtnAll, footerBtnBlocked]);
+    }
+
+    function createButtonContainer(buttons) {
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'button-container';
+        buttonContainer.style.display = 'inline-flex';
+        buttonContainer.style.gap = '10px';
+        buttonContainer.style.alignItems = 'center';
+        buttonContainer.style.maxWidth = 'fit-content';
+
+        buttons.forEach(button => buttonContainer.appendChild(button));
+
+        return buttonContainer;
+    }
+
+    function createButtonStateManager() {
+        let showHeaderAll = false;
+        let showFooterAll = false;
+        let showHeaderBlocked = false;
+        let showFooterBlocked = false;
+
+        function applyFilters() {
+            filterTopics(showHeaderAll, showHeaderBlocked);
+            filterComments(showHeaderAll, showHeaderBlocked);
+        }
+
+        function toggleState(buttonType, stateType) {
+            if (!stateType) {
+                if (buttonType === 'header') {
+                    showHeaderBlocked = false;
+                    headerBtnBlocked.classList.remove('active');
+                    showFooterBlocked = false;
+                    footerBtnBlocked.classList.remove('active');
+                } else if (buttonType === 'footer') {
+                    showFooterBlocked = false;
+                    footerBtnBlocked.classList.remove('active');
+                    showHeaderBlocked = false;
+                    headerBtnBlocked.classList.remove('active');
+                }
+            } else {
+                if (buttonType === 'header') {
+                    showHeaderAll = false;
+                    headerBtnAll.classList.remove('active');
+                    showFooterAll = false;
+                    footerBtnAll.classList.remove('active');
+                } else if (buttonType === 'footer') {
+                    showFooterAll = false;
+                    footerBtnAll.classList.remove('active');
+                    showHeaderAll = false;
+                    headerBtnAll.classList.remove('active');
+                }
+            }
+
+            if (buttonType === 'header') {
+                if (stateType) {
+                    showHeaderBlocked = !showHeaderBlocked;
+                    headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
+                    showFooterBlocked = showHeaderBlocked;
+                    footerBtnBlocked.classList.toggle('active', showFooterBlocked);
+                } else {
+                    showHeaderAll = !showHeaderAll;
+                    headerBtnAll.classList.toggle('active', showHeaderAll);
+                    showFooterAll = showHeaderAll;
+                    footerBtnAll.classList.toggle('active', showFooterAll);
+                }
+            } else if (buttonType === 'footer') {
+                if (stateType) {
+                    showFooterBlocked = !showFooterBlocked;
+                    footerBtnBlocked.classList.toggle('active', showFooterBlocked);
+                    showHeaderBlocked = showFooterBlocked;
+                    headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
+                } else {
+                    showFooterAll = !showFooterAll;
+                    footerBtnAll.classList.toggle('active', showFooterAll);
+                    showHeaderAll = showFooterAll;
+                    headerBtnAll.classList.toggle('active', showHeaderAll);
+                }
+            }
+
+            applyFilters();
+        }
+
+        return {
+            toggleHeaderAll: () => toggleState('header', false),
+            toggleHeaderBlocked: () => toggleState('header', true),
+            toggleFooterAll: () => toggleState('footer', false),
+            toggleFooterBlocked: () => toggleState('footer', true),
+            getHeaderAll: () => showHeaderAll,
+            getHeaderBlocked: () => showHeaderBlocked,
+            getFooterAll: () => showFooterAll,
+            getFooterBlocked: () => showFooterBlocked
+        };
+    }
+
     function extendSections(sectionType) {
         let querySelector = `.forum_paging.forum_paging_${sectionType}`;
 
         if (sectionType === 'pagectn' || sectionType === 'fpagectn') {
             querySelector = `.forum_paging[id$='_${sectionType}']`;
-        }
+       }
 
-        const sections = document.querySelectorAll(querySelector);
+        const sections = Array.from(document.querySelectorAll(querySelector)).filter(section =>
+            sectionType === 'pagectn' || sectionType === 'fpagectn'
+                ? section.id.endsWith(`_${sectionType}`)
+                : section.classList.contains(`forum_paging_${sectionType}`)
+        );
 
         sections.forEach((section) => {
-            if (!section || window.getComputedStyle(section).display === 'none') {
-                return;
-            }
+            if (!section || window.getComputedStyle(section).display === 'none') return;
+
+            section.classList.add(`forum_paging_${sectionType}`);
 
             const exSections = document.createElement('div');
-            exSections.className = `forum_paging forum_paging_${sectionType}_extended`;
-
-            const computedStyles = window.getComputedStyle(section);
-
-            exSections.style.position = 'relative';
-            exSections.style.display = 'flex';
-            exSections.style.justifyContent = 'space-between';
-            exSections.style.lineHeight = computedStyles.lineHeight;
-            exSections.style.height = computedStyles.height;
-            exSections.style.backgroundColor = computedStyles.backgroundColor;
-            exSections.style.borderBottomLeftRadius = computedStyles.borderBottomLeftRadius;
-            exSections.style.borderBottomRightRadius = computedStyles.borderBottomRightRadius;
-            exSections.style.color = computedStyles.color;
-            exSections.style.padding = computedStyles.padding;
-            exSections.style.margin = computedStyles.margin;
-
-            if (sectionType === 'header' || sectionType === 'pagectn') {
-                section.style.borderBottomLeftRadius = '0';
-                section.style.borderBottomRightRadius = '0';
-                section.style.marginBottom = '0';
-
-                exSections.style.borderTopLeftRadius = '0';
-                exSections.style.borderTopRightRadius = '0';
-                exSections.style.marginTop = '0';
-            } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
-                section.style.borderTopLeftRadius = '0';
-                section.style.borderTopRightRadius = '0';
-                section.style.marginTop = '0';
-
-                exSections.style.borderBottomLeftRadius = '0';
-                exSections.style.borderBottomRightRadius = '0';
-                exSections.style.marginBottom = '0';
-            }
+            exSections.classList.add('forum_paging_extended', `forum_paging_${sectionType}_extended`);
 
             if (sectionType === 'header' || sectionType === 'pagectn') {
                 section.insertAdjacentElement('afterend', exSections);
@@ -537,129 +662,6 @@
 
 
 
-    function createButtonStateManager() {
-        let showHeaderAll = false;
-        let showFooterAll = false;
-        let showHeaderBlocked = false;
-        let showFooterBlocked = false;
-
-        function applyFilters() {
-            filterTopics(showHeaderAll, showHeaderBlocked);
-            filterComments(showHeaderAll, showHeaderBlocked);
-        }
-
-        return {
-            toggleHeaderAll() {
-                if (!showHeaderAll) {
-                    showHeaderBlocked = false;
-                    headerBtnBlocked.classList.remove('active');
-                    showFooterBlocked = false;
-                    footerBtnBlocked.classList.remove('active');
-                }
-
-                showHeaderAll = !showHeaderAll;
-                headerBtnAll.classList.toggle('active', showHeaderAll);
-                showFooterAll = showHeaderAll;
-                footerBtnAll.classList.toggle('active', showFooterAll);
-
-                applyFilters();
-            },
-
-            toggleHeaderBlocked() {
-                if (!showHeaderBlocked) {
-                    showHeaderAll = false;
-                    headerBtnAll.classList.remove('active');
-                    showFooterAll = false;
-                    footerBtnAll.classList.remove('active');
-                }
-
-                showHeaderBlocked = !showHeaderBlocked;
-                headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
-                showFooterBlocked = showHeaderBlocked;
-                footerBtnBlocked.classList.toggle('active', showFooterBlocked);
-
-                applyFilters();
-            },
-
-            toggleFooterAll() {
-                if (!showFooterAll) {
-                    showFooterBlocked = false;
-                    footerBtnBlocked.classList.remove('active');
-                    showHeaderBlocked = false;
-                    headerBtnBlocked.classList.remove('active');
-                }
-
-                showFooterAll = !showFooterAll;
-                footerBtnAll.classList.toggle('active', showFooterAll);
-                showHeaderAll = showFooterAll;
-                headerBtnAll.classList.toggle('active', showHeaderAll);
-
-                applyFilters();
-            },
-
-            toggleFooterBlocked() {
-                if (!showFooterBlocked) {
-                    showFooterAll = false;
-                    footerBtnAll.classList.remove('active');
-                    showHeaderAll = false;
-                    headerBtnAll.classList.remove('active');
-                }
-
-                showFooterBlocked = !showFooterBlocked;
-                footerBtnBlocked.classList.toggle('active', showFooterBlocked);
-                showHeaderBlocked = showFooterBlocked;
-                headerBtnBlocked.classList.toggle('active', showHeaderBlocked);
-
-                applyFilters();
-            },
-            getHeaderAll() {
-                return showHeaderAll;
-            },
-            getHeaderBlocked() {
-                return showHeaderBlocked;
-            },
-            getFooterAll() {
-                return showFooterAll;
-            },
-            getFooterBlocked() {
-                return showFooterBlocked;
-            }
-        };
-    }
-
-    const buttonManager = createButtonStateManager();
-
-    function createButton(text, className, onClickHandler) {
-        const button = document.createElement('button');
-        button.innerText = text;
-        button.className = className;
-        button.addEventListener('click', onClickHandler);
-        return button;
-    }
-
-    const headerBtnAll = createButton('All', 'header_all', buttonManager.toggleHeaderAll);
-    const headerBtnBlocked = createButton('Blocked', 'header_blocked', buttonManager.toggleHeaderBlocked);
-
-    const footerBtnAll = createButton('All', 'footer_all', buttonManager.toggleFooterAll);
-    const footerBtnBlocked = createButton('Blocked', 'footer_blocked', buttonManager.toggleFooterBlocked);
-
-    let buttonContainerHeader;
-    let buttonContainerFooter;
-
-    function createButtonContainer(buttons) {
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'button-container';
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.alignItems = 'center';
-
-        buttons.forEach(button => buttonContainer.appendChild(button));
-
-        return buttonContainer;
-    }
-
-
-
     function initCounts() {
         const { blockedCount, filteredCount: filteredCount } = countHiddenContent();
         displayCount(blockedCount, filteredCount);
@@ -686,31 +688,17 @@
         nicknameObserver.observe(document.body, { childList: true, subtree: true });
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        setHeaderBtns();
-        setFooterBtns();
-    });
 
-    extendSections('header');
-    extendSections('footer');
-    extendSections('pagectn');
-    extendSections('fpagectn');
-    setHeaderBtns();
-    setFooterBtns();
-    setPagingCtrls();
-    filterTopics();
-    filterComments();
-    initCounts();
-    watchUrl();
-    setVisibleCount();
-
+    const observedMenus = new WeakSet();
 
     const observeActionMenu = () => {
         document.querySelectorAll(".forum_comment_action_menu").forEach((menu) => {
+            if (observedMenus.has(menu)) return;
+            observedMenus.add(menu);
+
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     if (mutation.attributeName === "style" && menu.style.display !== "none") {
-                        console.log("Menu became visible:", menu);
                         addNickname(menu);
                     }
                 });
@@ -719,7 +707,6 @@
             observer.observe(menu, { attributes: true, attributeFilter: ["style"] });
         });
     };
-    observeActionMenu();
 
 
     const menuContainer = document.body;
@@ -735,31 +722,22 @@
         let commentsChanged = false;
 
         mutations.forEach((mutation) => {
-            mutation.addedNodes.forEach((node) => {
-                if (node.classList && node.classList.contains("forum_topic")) {
-                    topicsChanged = true;
-                }
-
-                if (node.classList && (node.classList.contains("commentthread_comment") || node.classList.contains("commentthread_deleted_expanded"))) {
-                    commentsChanged = true;
-                }
-
-                if (node.classList && node.classList.contains("forum_comment_action_menu")) {
-                    addNickname(node);
-                }
-            });
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.classList?.contains("forum_topic")) topicsChanged = true;
+                    if (node.classList?.contains("commentthread_comment") || node.classList?.contains("commentthread_deleted_expanded")) commentsChanged = true;
+                    if (node.classList?.contains("forum_comment_action_menu")) addNickname(node);
+                });
+            }
         });
 
-        if (topicsChanged) {
+        if (topicsChanged || commentsChanged) {
             filterTopics(
                 buttonManager.getHeaderAll(),
                 buttonManager.getHeaderBlocked(),
                 buttonManager.getFooterAll(),
                 buttonManager.getFooterBlocked()
             );
-        }
-
-        if (commentsChanged) {
             filterComments(
                 buttonManager.getHeaderAll(),
                 buttonManager.getHeaderBlocked(),
@@ -781,4 +759,18 @@
     if (commentContainer) {
         observer.observe(commentContainer, { childList: true, subtree: true });
     }
+
+    initButtons();
+    extendSections('header');
+    extendSections('footer');
+    extendSections('pagectn');
+    extendSections('fpagectn');
+    setHeaderBtns();
+    setFooterBtns();
+    setPagingCtrls();
+    filterTopics();
+    filterComments();
+    initCounts();
+    watchUrl();
+    setVisibleCount();
 })();
