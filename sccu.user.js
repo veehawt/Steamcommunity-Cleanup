@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.4
+// @version      0.3.5
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -143,6 +143,13 @@
             background-color: rgba(21, 31, 44, 0.7);
             color: #56707f;
             padding: 0px 6px;
+        }
+        .forum_paging_header,
+        .forum_paging_pagectn {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-bottom: 0;
+            margin-top: 2px;
         }
         .forum_paging_header_extended,
         .forum_paging_pagectn_extended {
@@ -335,8 +342,8 @@
 
         let totalCount = parseInt(pageEndSpan.textContent.trim()) || 0;
         let hiddenCount = isCommentSection
-        ? document.querySelectorAll('.commentthread_comment[style="display: none;"]').length
-        : document.querySelectorAll('.forum_topic[style="display: none;"]').length;
+            ? document.querySelectorAll('.commentthread_comment[style="display: none;"]').length
+            : document.querySelectorAll('.forum_topic[style="display: none;"]').length;
 
         if (hiddenCount !== lastHiddenCount) {
             let visibleCount = Math.max(0, totalCount - hiddenCount);
@@ -562,7 +569,7 @@
 
         if (sectionType === 'pagectn' || sectionType === 'fpagectn') {
             querySelector = `.forum_paging[id$='_${sectionType}']`;
-       }
+        }
 
         const sections = Array.from(document.querySelectorAll(querySelector)).filter(section =>
             sectionType === 'pagectn' || sectionType === 'fpagectn'
