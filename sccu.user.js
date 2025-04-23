@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.4.3
+// @version      0.4.4
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -87,7 +87,10 @@
             position: relative;
             top: 1px;
         }
-        .header_all, .header_blocked, .footer_all, .footer_blocked {
+        .header_all,
+        .header_blocked,
+        .footer_all,
+        .footer_blocked {
             display: inline-block;
             border-radius: 2px;
             border: none;
@@ -100,14 +103,20 @@
             color: #67c1f5 !important;
             line-height: 17px;
         }
-        .header_all.active, .header_blocked.active, .footer_all.active, .footer_blocked.active {
+        .header_all.active,
+        .header_blocked.active,
+        .footer_all.active,
+        .footer_blocked.active {
             box-shadow: 0 0 2px #417a9b, 0 0 10px #417a9b;
             background: #549EC8
             background: -webkit-linear-gradient( 150deg, #417a9b 5%, #549EC8 95%);
             background: linear-gradient( -60deg, #417a9b 5%, #549EC8 95%);
             color: #fff !important;
         }
-        .header_all:hover, .header_blocked:hover, .footer_all:hover, .footer_blocked:hover {
+        .header_all:hover,
+        .header_blocked:hover,
+        .footer_all:hover,
+        .footer_blocked:hover {
             background: #417a9b;
             background: -webkit-linear-gradient( 150deg, #417a9b 5%,#67c1f5 95%);
             background: linear-gradient( -60deg, #417a9b 5%, #67c1f5 95%);
