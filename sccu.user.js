@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.4.2
+// @version      0.4.3
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -640,41 +640,40 @@
         });
     }
 
+
+
+    function setBtnContainer(btnType) {
+        const buttonContainer = btnType === 'header' ? buttonContainerHeader : buttonContainerFooter;
+        const pagingExtended = document.querySelector(`.forum_paging_${btnType}_extended`);
+        const pagingPageCtnExtended = document.querySelector(`.forum_paging_${btnType === 'header' ? 'pagectn' : 'fpagectn'}_extended`);
+
+        if (!buttonContainer) {
+            const container = document.createElement('div');
+            container.classList.add(`button-container-${btnType}`);
+            if (btnType === 'header') {
+                buttonContainerHeader = container;
+            } else if (btnType === 'footer') {
+                buttonContainerFooter = container;
+            }
+        }
+
+        if (pagingExtended && !pagingExtended.contains(buttonContainer)) {
+            pagingExtended.appendChild(buttonContainer);
+        }
+
+        if (pagingPageCtnExtended && !pagingPageCtnExtended.contains(buttonContainer)) {
+            pagingPageCtnExtended.appendChild(buttonContainer);
+        }
+    }
+
     function setHeaderBtns() {
-        let pagingHeaderExtended = document.querySelector('.forum_paging_header_extended');
-        let pagingPageCtnExtended = document.querySelector('.forum_paging_pagectn_extended');
-
-        if (!buttonContainerHeader) {
-            buttonContainerHeader = document.createElement('div');
-            buttonContainerHeader.classList.add('button-container-header');
-        }
-
-        if (pagingHeaderExtended && !pagingHeaderExtended.contains(buttonContainerHeader)) {
-            pagingHeaderExtended.appendChild(buttonContainerHeader);
-        }
-
-        if (pagingPageCtnExtended && !pagingPageCtnExtended.contains(buttonContainerHeader)) {
-            pagingPageCtnExtended.appendChild(buttonContainerHeader);
-        }
+        setBtnContainer('header');
     }
 
     function setFooterBtns() {
-        let pagingFooterExtended = document.querySelector('.forum_paging_footer_extended');
-        let pagingFPageCtnExtended = document.querySelector('.forum_paging_fpagectn_extended');
-
-        if (!buttonContainerFooter) {
-            buttonContainerFooter = document.createElement('div');
-            buttonContainerFooter.classList.add('button-container-footer');
-        }
-
-        if (pagingFooterExtended && !pagingFooterExtended.contains(buttonContainerFooter)) {
-            pagingFooterExtended.appendChild(buttonContainerFooter);
-        }
-
-        if (pagingFPageCtnExtended && !pagingFPageCtnExtended.contains(buttonContainerFooter)) {
-            pagingFPageCtnExtended.appendChild(buttonContainerFooter);
-        }
+        setBtnContainer('footer');
     }
+
 
     function setPagingCtrls(newElement, controlType) {
         let pagingControls;
