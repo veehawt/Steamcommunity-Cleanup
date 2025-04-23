@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.9
+// @version      0.4.0
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -407,13 +407,13 @@
             topicElement.classList.remove('hidden-blocked-user', 'hidden-filtered');
 
             if (isBlockedTopic) {
-                topicElement.style.display = showAll || showBlocked ? '' : 'none';
+                topicElement.style.display = (showAll || showBlocked) ? '' : 'none';
                 if (showAll || showBlocked) topicElement.classList.add('hidden-blocked-user');
                 return;
             }
 
             if (isFilteredTopic) {
-                topicElement.style.display = showAll ? '' : 'none';
+                topicElement.style.display = (showAll) ? '' : 'none';
                 if (showAll) topicElement.classList.add('hidden-filtered');
                 return;
             }
@@ -423,7 +423,30 @@
         initCounts();
     }
 
+    function filterOP(showAll = false, showBlocked = false) {
+        const blockedHiddenPost = document.querySelector('.forum_op [id^="forum_op_hidden_"]');
+        const blockedHiddenPostToggle = document.querySelector('.forum_op [id^="forum_op_showhidden_"]');
+        const blockedHiddenPostUnhide = document.querySelector('.forum_op .commentthread_show_deleted_link');
+
+        if (blockedHiddenPostUnhide && blockedHiddenPost && blockedHiddenPostToggle) {
+            const isBlockedOP = getComputedStyle(blockedHiddenPostToggle).display !== 'none';
+
+            if (isBlockedOP) {
+                if (showAll || showBlocked) {
+                    blockedHiddenPostUnhide.click(); // Simulate Steam's "Show"
+                }
+            } else {
+                if (!(showAll || showBlocked)) {
+                    blockedHiddenPost.style.setProperty('display', 'none', 'important');
+                    blockedHiddenPostToggle.style.removeProperty('display');
+                }
+            }
+        }
+    }
+
     function filterComments(showAll = false, showBlocked = false) {
+        filterOP(showAll, showBlocked);
+
         let comments = document.querySelectorAll('.commentthread_comment');
 
         comments.forEach(comment => {
@@ -445,13 +468,13 @@
             comment.classList.remove('hidden-blocked-user-comment', 'hidden-filtered-comment');
 
             if (isBlockedComment) {
-                comment.style.display = showAll || showBlocked ? '' : 'none';
+                comment.style.display = (showAll || showBlocked) ? '' : 'none';
                 if (showAll || showBlocked) comment.classList.add('hidden-blocked-user-comment');
                 return;
             }
 
             if (isFilteredComment) {
-                comment.style.display = showAll ? '' : 'none';
+                comment.style.display = (showAll) ? '' : 'none';
                 if (showAll) comment.classList.add('hidden-filtered-comment');
                 return;
             }
