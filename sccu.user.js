@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.4.1
+// @version      0.4.2
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -630,19 +630,10 @@
 
             if (sectionType === 'header' || sectionType === 'pagectn') {
                 section.insertAdjacentElement('afterend', exSections);
+                exSections.appendChild(buttonContainerHeader);
             } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
                 section.insertAdjacentElement('beforebegin', exSections);
-            }
-
-            let buttonContainer;
-            if (sectionType === 'header' || sectionType === 'pagectn') {
-                buttonContainer = createButtonContainer([headerBtnAll, headerBtnBlocked]);
-            } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
-                buttonContainer = createButtonContainer([footerBtnAll, footerBtnBlocked]);
-            }
-
-            if (buttonContainer) {
-                exSections.appendChild(buttonContainer);
+                exSections.appendChild(buttonContainerFooter);
             }
 
             setPagingCtrls(exSections, sectionType);
