@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.8
+// @version      0.3.9
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -133,7 +133,10 @@
         .hidden-blocked-user-comment {
             background-color: #2b2230 !important;
         }
-        .forum_paging_extended {
+        .forum_paging_header_extended,
+        .forum_paging_pagectn_extended,
+        .forum_paging_footer_extended,
+        .forum_paging_fpagectn_extended {
             position: relative;
             display: flex;
             justify-content: space-between;
@@ -261,10 +264,10 @@
             let comments = document.querySelectorAll('.commentthread_comment');
 
             comments.forEach(comment => {
-                let textElement = comment.querySelector('.commentthread_comment_text');
-                if (!textElement) return;
+                let commentText = comment.querySelector('.commentthread_comment_text');
+                if (!commentText) return;
 
-                let rawText = textElement.innerHTML;
+                let rawText = commentText.innerHTML;
                 let cleanedText = rawText.replace(/<blockquote.*?>.*?<\/blockquote>/gis, '').trim();
                 let isBlockedComment = comment.classList.contains('commentthread_deleted_expanded');
                 let isFilteredComment = matchesCriteria(cleanedText, [], regexFiltersComments);
@@ -589,7 +592,7 @@
             section.classList.add(`forum_paging_${sectionType}`);
 
             const exSections = document.createElement('div');
-            exSections.classList.add('forum_paging_extended', `forum_paging_${sectionType}_extended`);
+            exSections.classList.add(`forum_paging_${sectionType}_extended`);
 
             if (sectionType === 'header' || sectionType === 'pagectn') {
                 section.insertAdjacentElement('afterend', exSections);
