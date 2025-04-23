@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.4.0
+// @version      0.4.1
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -132,6 +132,10 @@
         }
         .hidden-blocked-user-comment {
             background-color: #2b2230 !important;
+        }
+        .hidden-blocked-OP {
+            background: #2b2230 !important;
+            border: 1px solid #30242b;
         }
         .forum_paging_header_extended,
         .forum_paging_pagectn_extended,
@@ -424,6 +428,7 @@
     }
 
     function filterOP(showAll = false, showBlocked = false) {
+        const opWrapper = document.querySelector('.forum_op');
         const blockedHiddenPost = document.querySelector('.forum_op [id^="forum_op_hidden_"]');
         const blockedHiddenPostToggle = document.querySelector('.forum_op [id^="forum_op_showhidden_"]');
         const blockedHiddenPostUnhide = document.querySelector('.forum_op .commentthread_show_deleted_link');
@@ -431,14 +436,20 @@
         if (blockedHiddenPostUnhide && blockedHiddenPost && blockedHiddenPostToggle) {
             const isBlockedOP = getComputedStyle(blockedHiddenPostToggle).display !== 'none';
 
+            blockedHiddenPostUnhide.addEventListener('click', () => {
+                opWrapper.classList.add('hidden-blocked-OP');
+            });
+
             if (isBlockedOP) {
                 if (showAll || showBlocked) {
                     blockedHiddenPostUnhide.click(); // Simulate Steam's "Show"
+                    opWrapper.classList.add('hidden-blocked-OP');
                 }
             } else {
                 if (!(showAll || showBlocked)) {
                     blockedHiddenPost.style.setProperty('display', 'none', 'important');
                     blockedHiddenPostToggle.style.removeProperty('display');
+                    opWrapper.classList.remove('hidden-blocked-OP');
                 }
             }
         }
