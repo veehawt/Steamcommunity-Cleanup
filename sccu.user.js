@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.6
+// @version      0.3.7
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -186,14 +186,24 @@
     styleSheet.innerText = scriptStyles;
     document.head.appendChild(styleSheet);
 
-    const TradingForum = window.location.href.includes('/tradingforum/');
-    let isCommentSection = document.querySelector('.commentthread_comment_container') !== null;
-    let regexFilters = TradingForum ? regexSpam : [...regexTrade, ...regexLanguage, ...regexSpam];
-    let regexFiltersComments = [...regexLanguage, ...regexSpam];
+    const isTradingForum      = window.location.href.includes('/tradingforum/');
+    const isTopicsContainer   = document.querySelector('.forum_topics_container');
+    const isCommentsContainer = document.querySelector('.commentthread_comment_container');
 
-    const buttonManager = createButtonStateManager();
+    const isGeneralForum = !!isTopicsContainer;
+    const isDiscussion   = !!isCommentsContainer;
+
+    let regexFilters         = isTradingForum ? regexSpam : [...regexTrade, ...regexLanguage, ...regexSpam];
+    let regexFiltersComments = isTradingForum ? regexSpam : [               ...regexLanguage, ...regexSpam];
+
+    let showAllHeader = false;
+    let showAllFooter = false;
+    let showBlockedHeader = false;
+    let showBlockedFooter = false;
+
     let headerBtnAll, footerBtnAll, headerBtnBlocked, footerBtnBlocked;
     let buttonContainerHeader, buttonContainerFooter;
+    const buttonManager = createButtonStateManager();
 
 
 
@@ -231,7 +241,7 @@
         let blockedCount = 0;
         let filteredCount = 0;
 
-        if (!isCommentSection) {
+        if (isGeneralForum) {
             let topics = document.querySelectorAll('.forum_topic');
 
             topics.forEach(topic => {
@@ -247,8 +257,8 @@
                 if (isBlockedTopic) blockedCount++;
                 if (isFilteredTopic) filteredCount++;
             });
-
-        } else {
+        }
+        if (isDiscussion) {
             let comments = document.querySelectorAll('.commentthread_comment');
 
             comments.forEach(comment => {
@@ -256,21 +266,13 @@
                 if (!textElement) return;
 
                 let rawText = textElement.innerHTML;
-                let text = textElement.textContent.trim();
                 let cleanedText = rawText.replace(/<blockquote.*?>.*?<\/blockquote>/gis, '').trim();
-
                 let isBlockedComment = comment.classList.contains('commentthread_deleted_expanded');
-
-                if (isBlockedComment) {
-                    blockedCount++;
-                    return;
-                }
-
                 let isFilteredComment = matchesCriteria(cleanedText, [], regexFiltersComments);
 
-                if (isFilteredComment) {
-                    filteredCount++;
-                }
+                if (isBlockedComment) blockedCount++
+                if (isFilteredComment) filteredCount++;
+
             });
         }
         return { blockedCount, filteredCount: filteredCount };
@@ -328,9 +330,12 @@
         });
     }
 
-    let lastHiddenCount = 0;
 
     function setVisibleCount() {
+        const pageStartSpan = document.querySelector(
+            'span[id^="forum_General_"][id$="_pagestart"], ' +
+            '[id^="commentthread_ForumTopic_"][id$="_pagestart"]'
+        );
         const pageEndSpan = document.querySelector(
             'span[id^="forum_General_"][id$="_pageend"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_pageend"]'
@@ -340,21 +345,22 @@
             '[id^="commentthread_ForumTopic_"][id$="_fpageend"]'
         );
 
-        if (!pageEndSpan || !pageEndSpanFooter) return;
+        if (!pageEndSpan || !pageEndSpanFooter || !pageStartSpan) return;
 
-        let totalCount = parseInt(pageEndSpan.textContent.trim()) || 0;
-        let hiddenCount = isCommentSection
-            ? document.querySelectorAll('.commentthread_comment[style="display: none;"]').length
-            : document.querySelectorAll('.forum_topic[style="display: none;"]').length;
+        const startIndex = parseInt(pageStartSpan.textContent.trim()) || 1;
 
-        if (hiddenCount !== lastHiddenCount) {
-            let visibleCount = Math.max(0, totalCount - hiddenCount);
+        let visibleCount = 0;
 
-            pageEndSpan.textContent = visibleCount;
-            pageEndSpanFooter.textContent = visibleCount;
-
-            lastHiddenCount = hiddenCount;
+        if (isDiscussion) {
+            visibleCount = document.querySelectorAll('.commentthread_comment:not([style*="display: none"])').length;
+        } else {
+            visibleCount = document.querySelectorAll('.forum_topic:not([style*="display: none"])').length;
         }
+
+        const endIndex = Math.max(startIndex + visibleCount - 1, startIndex);
+
+        pageEndSpan.textContent = endIndex;
+        pageEndSpanFooter.textContent = endIndex;
     }
 
 
@@ -488,10 +494,6 @@
     }
 
     function createButtonStateManager() {
-        let showAllHeader = false;
-        let showAllFooter = false;
-        let showBlockedHeader = false;
-        let showBlockedFooter = false;
 
         function applyFilters() {
             filterTopics(showAllHeader, showBlockedHeader);
@@ -552,6 +554,7 @@
             }
 
             applyFilters();
+            setVisibleCount();
         }
 
         return {
@@ -573,11 +576,14 @@
             querySelector = `.forum_paging[id$='_${sectionType}']`;
         }
 
-        const sections = Array.from(document.querySelectorAll(querySelector)).filter(section =>
-            sectionType === 'pagectn' || sectionType === 'fpagectn'
-                ? section.id.endsWith(`_${sectionType}`)
-                : section.classList.contains(`forum_paging_${sectionType}`)
-        );
+        const sections = Array.from(document.querySelectorAll(querySelector)).filter(section => {
+            const isPageCtn = sectionType === 'pagectn' || sectionType === 'fpagectn';
+            if (isPageCtn) {
+                return section.id.endsWith(`_${sectionType}`);
+            } else {
+                return section.classList.contains(`forum_paging_${sectionType}`);
+            }
+        });
 
         sections.forEach((section) => {
             if (!section || window.getComputedStyle(section).display === 'none') return;
@@ -757,15 +763,12 @@
         setVisibleCount();
     });
 
-    const isForum = document.querySelector('.forum_topics_container');
-    const isDiscussion = document.querySelector('.commentthread_comment_container');
-
-    if (isForum) {
-        observer.observe(isForum, { childList: true, subtree: true });
+    if (isTopicsContainer) {
+        observer.observe(isTopicsContainer, { childList: true, subtree: true });
     }
 
-    if (isDiscussion) {
-        observer.observe(isDiscussion, { childList: true, subtree: true });
+    if (isCommentsContainer) {
+        observer.observe(isCommentsContainer, { childList: true, subtree: true });
     }
 
     initButtons();
