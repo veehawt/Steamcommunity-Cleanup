@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.3.7
+// @version      0.3.8
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -48,7 +48,6 @@
         /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bi(?:t|\+)e\s*m(?:s|\$)\b))[^\w\s]*\b/i, // "free items"
         /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bk\s*n\s*i\s*[vf]\s*e\s*s\b))[^\w\s]*\b/i, // "free knife"
         /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bg\s*l\s*o\s*v\s*e\s*s\b))[^\w\s]*\b/i, // "free gloves"
-        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bg\s*i\s*v\s*e\s*a\s*w\s*a\s*y\b))[^\w\s]*\b/i, // "free giveaway"
         /\b[^\w\s]*(?:w\s*t\s*b|w\s*t\s*s|w\s*t\s*t)[^\w\s]*\b/i, // most common iterations of  "wtb, wts, wtt"
         /\bo+f{2,}e+r{1,}i?n?g?s?\b/i, // "offer, offering, offers"
         /(?<![\w-])([HWhw]|\([HWhw]\)|\[[HWhw]\]|\{[HWhw]\}|<[HWhw]>|<[\(\[\{]?[HWhw][\)\]\}]?>)(?![\w-])/, // H W with various brackets
@@ -272,7 +271,6 @@
 
                 if (isBlockedComment) blockedCount++
                 if (isFilteredComment) filteredCount++;
-
             });
         }
         return { blockedCount, filteredCount: filteredCount };
