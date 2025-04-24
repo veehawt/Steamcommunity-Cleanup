@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-CleanUp
 // @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.4.4
+// @version      0.4.5
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
@@ -18,19 +18,6 @@
 
 (function() {
     'use strict';
-
-    // Blocked user topics to hide
-    const blocked = [
-        "topic by a blocked user", "来自被屏蔽用户的主题", "來自被封鎖使用者的主題",
-        "ブロック中のユーザーによるトピック", "กระทู้จากผู้ใช้ที่ถูกบล็อค", "Тема от блокиран потребител",
-        "Téma od blokovaného uživatele", "Emne fra en blokeret bruger", "Thema eines blockierten Nutzers",
-        "Tema de un usuario bloqueado", "Θέμα από αποκλεισμένο χρήστη", "Sujet d'une personne bloquée",
-        "Discussione di un utente bloccato", "Topik dari pengguna yang diblokir", "Blokkolt felhasználó témája",
-        "Onderwerp van een geblokkeerde gebruiker", "Emne av en blokkert bruker", "Wątek autorstwa zablokowanego użytkownika",
-        "Tópico de um utilizador bloqueado", "Tópico de um usuário bloqueado", "Subiectul unui utilizator blocat",
-        "Тема, созданная заблокированным пользователем", "Estetyn käyttäjän keskustelunaihe", "Ämne från en blockerad användare",
-        "Engellenmiş kullanıcıya ait başlık", "Chủ đề từ người dùng bị chặn", "Тема від заблокованого користувача"
-    ];
 
     // Keywords in topic titles to hide
     const keywords = [
@@ -221,6 +208,34 @@
     const buttonManager = createButtonStateManager();
 
 
+    function isBlockedTopic(topic) {
+        return topic.classList.contains('op_hidden');
+    }
+
+    function isFilteredTopic(topic) {
+        const topicName = topic.querySelector('.forum_topic_name');
+        if (!topicName) return false;
+
+        const text = topicName.textContent.trim();
+
+        return matchesCriteria(text, keywords, regexFilters);
+    }
+
+    function isBlockedComment(comment) {
+        return comment.classList.contains('commentthread_deleted_expanded');
+    }
+
+    function isFilteredComment(comment) {
+        const commentText = comment.querySelector('.commentthread_comment_text');
+        if (!commentText) return false;
+
+        const textClone = commentText.cloneNode(true);
+        textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
+        const cleanedText = textClone.textContent.trim();
+
+        return matchesCriteria(cleanedText, [], regexFiltersComments);
+    }
+
 
     function watchUrl() {
         window.addEventListener('popstate', () => {
@@ -257,39 +272,25 @@
         let filteredCount = 0;
 
         if (isGeneralForum) {
-            let topics = document.querySelectorAll('.forum_topic');
+            const topics = document.querySelectorAll('.forum_topic');
 
             topics.forEach(topic => {
                 if (topic.closest('.rightSectionTopTitle')) return;
 
-                let topicName = topic.querySelector('.forum_topic_name');
-                if (!topicName) return;
-
-                let text = topicName.textContent.trim();
-                let isBlockedTopic = matchesCriteria(text, blocked, []);
-                let isFilteredTopic = matchesCriteria(text, keywords, regexFilters);
-
-                if (isBlockedTopic) blockedCount++;
-                if (isFilteredTopic) filteredCount++;
+                if (isBlockedTopic(topic)) blockedCount++;
+                if (isFilteredTopic(topic)) filteredCount++;
             });
         }
+
         if (isDiscussion) {
-            let comments = document.querySelectorAll('.commentthread_comment');
+            const comments = document.querySelectorAll('.commentthread_comment');
 
             comments.forEach(comment => {
-                let commentText = comment.querySelector('.commentthread_comment_text');
-                if (!commentText) return;
-
-                let rawText = commentText.innerHTML;
-                let cleanedText = rawText.replace(/<blockquote.*?>.*?<\/blockquote>/gis, '').trim();
-                let isBlockedComment = comment.classList.contains('commentthread_deleted_expanded');
-                let isFilteredComment = matchesCriteria(cleanedText, [], regexFiltersComments);
-
-                if (isBlockedComment) blockedCount++
-                if (isFilteredComment) filteredCount++;
+                if (isBlockedComment(comment)) blockedCount++;
+                if (isFilteredComment(comment)) filteredCount++;
             });
         }
-        return { blockedCount, filteredCount: filteredCount };
+        return { blockedCount, filteredCount };
     }
 
     function displayCount(blockedCount, filteredCount) {
@@ -408,31 +409,28 @@
     }
 
     function filterTopics(showAll = false, showBlocked = false) {
-        let topics = document.querySelectorAll('.forum_topic_name');
+        const topics = document.querySelectorAll('.forum_topic');
 
         topics.forEach(topic => {
-            let title = topic.textContent.trim();
-            let topicElement = topic.closest('.forum_topic');
+            if (topic.closest('.rightSectionTopTitle')) return;
 
-            let isBlockedTopic = matchesCriteria(title, blocked, []);
-            let isFilteredTopic = matchesCriteria(title, keywords, regexFilters);
+            topic.classList.remove('hidden-blocked-user', 'hidden-filtered');
 
-            topicElement.classList.remove('hidden-blocked-user', 'hidden-filtered');
-
-            if (isBlockedTopic) {
-                topicElement.style.display = (showAll || showBlocked) ? '' : 'none';
-                if (showAll || showBlocked) topicElement.classList.add('hidden-blocked-user');
+            if (isBlockedTopic(topic)) {
+                topic.style.display = (showAll || showBlocked) ? '' : 'none';
+                if (showAll || showBlocked) topic.classList.add('hidden-blocked-user');
                 return;
             }
 
-            if (isFilteredTopic) {
-                topicElement.style.display = (showAll) ? '' : 'none';
-                if (showAll) topicElement.classList.add('hidden-filtered');
+            if (isFilteredTopic(topic)) {
+                topic.style.display = (showAll) ? '' : 'none';
+                if (showAll) topic.classList.add('hidden-filtered');
                 return;
             }
 
-            topicElement.style.display = '';
+            topic.style.display = '';
         });
+
         initCounts();
     }
 
@@ -467,7 +465,7 @@
     function filterComments(showAll = false, showBlocked = false) {
         filterOP(showAll, showBlocked);
 
-        let comments = document.querySelectorAll('.commentthread_comment');
+        const comments = document.querySelectorAll('.commentthread_comment');
 
         comments.forEach(comment => {
             if (comment.classList.contains('commentthread_deleted_comment')) {
@@ -475,25 +473,15 @@
                 return;
             }
 
-            let textElement = comment.querySelector('.commentthread_comment_text');
-            if (!textElement) return;
-
-            let textClone = textElement.cloneNode(true);
-            textClone.querySelectorAll('blockquote').forEach(blockquote => blockquote.remove());
-            let text = textClone.textContent.trim();
-
-            let isBlockedComment = comment.classList.contains('commentthread_deleted_expanded');
-            let isFilteredComment = matchesCriteria(text, [], regexFiltersComments);
-
             comment.classList.remove('hidden-blocked-user-comment', 'hidden-filtered-comment');
 
-            if (isBlockedComment) {
+            if (isBlockedComment(comment)) {
                 comment.style.display = (showAll || showBlocked) ? '' : 'none';
                 if (showAll || showBlocked) comment.classList.add('hidden-blocked-user-comment');
                 return;
             }
 
-            if (isFilteredComment) {
+            if (isFilteredComment(comment)) {
                 comment.style.display = (showAll) ? '' : 'none';
                 if (showAll) comment.classList.add('hidden-filtered-comment');
                 return;
@@ -501,6 +489,7 @@
 
             comment.style.display = '';
         });
+
         initCounts();
     }
 
