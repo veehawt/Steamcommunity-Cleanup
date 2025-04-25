@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.7
+// @version      0.4.8
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -290,6 +290,7 @@
                 if (isFilteredComment(comment)) filteredCount++;
             });
         }
+
         return { blockedCount, filteredCount };
     }
 
@@ -373,7 +374,9 @@
             'span[id^="forum_General_"][id$="_footerpageend"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_fpageend"]'
         );
-        const summaryDivs = document.querySelectorAll('.forum_paging_summary.ellipsis');
+        const summaryDivs = document.querySelectorAll(
+            '.forum_paging_summary.ellipsis'
+        );
 
         if (!pageStart || !pageEnd || !pageStartFooter || !pageEndFooter || !summaryDivs) return;
 
@@ -383,6 +386,7 @@
 
         updatePageStart(pageStart, pageStartFooter, endIndex !== 0, startIndex);
         updateDashSeparators(summaryDivs, endIndex !== 0);
+        updateFooterVisibility()
     }
 
     function getPageStartIndex(span) {
@@ -407,6 +411,8 @@
 
     function updatePageEnd(span, footerSpan, startIndex, visibleCount) {
         const endIndex = visibleCount > 0 ? startIndex + visibleCount - 1 : 0;
+        window.endIndex = endIndex;
+        
         const formatted = formatNumberWithLocale(endIndex);
 
         span.textContent = formatted;
@@ -694,6 +700,23 @@
             }
 
             setPagingCtrls(exSections, sectionType);
+        });
+    }
+
+    function updateFooterVisibility() {
+        const footerTypes = ['footer', 'fpagectn'];
+
+        footerTypes.forEach(type => {
+            const section = document.querySelector(`.forum_paging_${type}`);
+            const extended = document.querySelector(`.forum_paging_${type}_extended`);
+
+            if (window.endIndex === 0) {
+                if (section) section.style.display = 'none';
+                if (extended) extended.style.display = 'none';
+            } else {
+                if (section) section.style.display = '';
+                if (extended) extended.style.display = '';
+            }
         });
     }
 
