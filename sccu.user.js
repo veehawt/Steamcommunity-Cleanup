@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.6
+// @version      0.4.7
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -209,7 +209,7 @@
 
 
     function isBlockedTopic(topic) {
-        return topic.classList.contains('op_hidden');
+        return topic.querySelector('.forum_topic_name.op_hidden');
     }
 
     function isFilteredTopic(topic) {
