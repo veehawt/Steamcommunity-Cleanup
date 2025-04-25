@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         Steamcommunity-CleanUp
-// @namespace    https://github.com/veehawt/Steamcommunity-CleanUp
-// @version      0.4.5
+// @name         Steamcommunity-Cleanup
+// @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
+// @version      0.4.6
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
-// @supportURL   https://github.com/veehawt/Steamcommunity-CleanUp/issues
-// @downloadURL  https://github.com/veehawt/Steamcommunity-CleanUp/raw/master/sccu.user.js
-// @updateURL    https://github.com/veehawt/Steamcommunity-CleanUp/raw/master/sccu.user.js
+// @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
+// @downloadURL  https://github.com/veehawt/Steamcommunity-Cleanup/raw/master/sccu.user.js
+// @updateURL    https://github.com/veehawt/Steamcommunity-Cleanup/raw/master/sccu.user.js
 // @match        https://steamcommunity.com/*/*/discussions/*
 // @match        https://steamcommunity.com/app/*/tradingforum/*
 // @match        https://steamcommunity.com/app/*/eventcomments/*
@@ -311,8 +311,11 @@
                 if (filteredCount > 0) {
                     displayText += `${filteredCount} filtered`;
                 }
+                const newDisplay = displayText === '' ? '' : ` (${displayText})`;
+                if (countDisplay.textContent !== newDisplay) {
+                    countDisplay.textContent = newDisplay;
+                }
 
-                countDisplay.textContent = displayText === '' ? '' : ` (${displayText})`;
             } else {
                 const newCountDisplay = document.createElement('span');
                 newCountDisplay.id = 'count-display';
@@ -346,36 +349,92 @@
     }
 
 
+    const userLocale = navigator.language || 'en-US';
+
+    function formatNumberWithLocale(number) {
+        const formatter = new Intl.NumberFormat(userLocale);
+        return formatter.format(number);
+    }
+
     function setVisibleCount() {
-        const pageStartSpan = document.querySelector(
+        const pageStart = document.querySelector(
             'span[id^="forum_General_"][id$="_pagestart"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_pagestart"]'
         );
-        const pageEndSpan = document.querySelector(
+        const pageEnd = document.querySelector(
             'span[id^="forum_General_"][id$="_pageend"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_pageend"]'
         );
-        const pageEndSpanFooter = document.querySelector(
+        const pageStartFooter = document.querySelector(
+            'span[id^="forum_General_"][id$="_footerpagestart"], ' +
+            '[id^="commentthread_ForumTopic_"][id$="_fpagestart"]'
+        );
+        const pageEndFooter = document.querySelector(
             'span[id^="forum_General_"][id$="_footerpageend"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_fpageend"]'
         );
+        const summaryDivs = document.querySelectorAll('.forum_paging_summary.ellipsis');
 
-        if (!pageEndSpan || !pageEndSpanFooter || !pageStartSpan) return;
+        if (!pageStart || !pageEnd || !pageStartFooter || !pageEndFooter || !summaryDivs) return;
 
-        const startIndex = parseInt(pageStartSpan.textContent.trim()) || 1;
+        const startIndex = getPageStartIndex(pageStart);
+        const visibleCount = getVisibleCount();
+        const endIndex = updatePageEnd(pageEnd, pageEndFooter, startIndex, visibleCount);
 
-        let visibleCount = 0;
+        updatePageStart(pageStart, pageStartFooter, endIndex !== 0, startIndex);
+        updateDashSeparators(summaryDivs, endIndex !== 0);
+    }
 
-        if (isDiscussion) {
-            visibleCount = document.querySelectorAll('.commentthread_comment:not([style*="display: none"])').length;
-        } else {
-            visibleCount = document.querySelectorAll('.forum_topic:not([style*="display: none"])').length;
-        }
+    function getPageStartIndex(span) {
+        const text = span.textContent.trim().replace('.', '');
+        return parseInt(text, 10) || 1;
+    }
 
-        const endIndex = Math.max(startIndex + visibleCount - 1, startIndex);
+    function getVisibleCount() {
+        return isDiscussion
+            ? document.querySelectorAll('.commentthread_comment:not([style*="display: none"])').length
+            : document.querySelectorAll('.forum_topic:not([style*="display: none"])').length;
+    }
 
-        pageEndSpan.textContent = endIndex;
-        pageEndSpanFooter.textContent = endIndex;
+    function updatePageStart(span, footerSpan, isVisible, startIndex) {
+        const formatted = formatNumberWithLocale(startIndex);
+        span.textContent = formatted;
+        footerSpan.textContent = formatted;
+
+        span.style.display = isVisible ? '' : 'none';
+        footerSpan.style.display = isVisible ? '' : 'none';
+    }
+
+    function updatePageEnd(span, footerSpan, startIndex, visibleCount) {
+        const endIndex = visibleCount > 0 ? startIndex + visibleCount - 1 : 0;
+        const formatted = formatNumberWithLocale(endIndex);
+
+        span.textContent = formatted;
+        footerSpan.textContent = formatted;
+
+        return endIndex;
+    }
+
+    function updateDashSeparators(summaryDivs, shouldShowDash) {
+        summaryDivs.forEach(summary => {
+            const existingDash = summary.querySelector('.dash') ||
+                  [...summary.childNodes].find(
+                      node => node.nodeType === 3 && node.nodeValue.trim() === '-'
+                  );
+
+            if (shouldShowDash && !existingDash) {
+                const dashSpan = document.createElement('span');
+                dashSpan.textContent = '-';
+                dashSpan.classList.add('dash');
+
+                const endSpans = summary.querySelectorAll('span[id$="_pageend"], span[id$="_footerpageend"], span[id$="_fpageend"]');
+                if (endSpans.length > 0) {
+                    summary.insertBefore(dashSpan, endSpans[0]);
+                }
+            } else if (!shouldShowDash && existingDash) {
+                existingDash.remove ? existingDash.remove() : summary.removeChild(existingDash);
+            }
+        });
     }
 
 
