@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.10
+// @version      0.4.11
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -244,7 +244,7 @@
         const text = topicName.textContent.trim();
 
         const isRegexMatch = matchesCriteria(text, keywords, regexFiltersTopics);
-        const isTradeMatch = isTradeRelated(text);
+        const isTradeMatch = !isTradingForum && isTradeRelated(text);
 
         return isRegexMatch || isTradeMatch;
     }
@@ -264,20 +264,6 @@
         return matchesCriteria(cleanedText, [], regexFiltersComments);
     }
 
-
-    function watchUrl() {
-        window.addEventListener('popstate', () => {
-            initCounts();
-            setVisibleCount();
-        });
-
-        window.addEventListener('hashchange', () => {
-            initCounts();
-            setVisibleCount();
-        });
-    }
-
-
     function isTradeRelated(content) {
         const text = content.toLowerCase();
         if (regexTradeNegatives.test(text)) return false;
@@ -295,6 +281,8 @@
 
         return matches[0] || matchCount >= 2;
     }
+
+
 
     function matchesCriteria(text, keywordList, regexList) {
         for (let keyword of keywordList) {
@@ -490,6 +478,59 @@
 
 
 
+    function extendSections(sectionType) {
+        let querySelector = `.forum_paging.forum_paging_${sectionType}`;
+
+        if (sectionType === 'pagectn' || sectionType === 'fpagectn') {
+            querySelector = `.forum_paging[id$='_${sectionType}']`;
+        }
+
+        const sections = Array.from(document.querySelectorAll(querySelector)).filter(section => {
+            const isPageCtn = sectionType === 'pagectn' || sectionType === 'fpagectn';
+            if (isPageCtn) {
+                return section.id.endsWith(`_${sectionType}`);
+            } else {
+                return section.classList.contains(`forum_paging_${sectionType}`);
+            }
+        });
+
+        sections.forEach((section) => {
+            if (!section || window.getComputedStyle(section).display === 'none') return;
+
+            section.classList.add(`forum_paging_${sectionType}`);
+
+            const exSections = document.createElement('div');
+            exSections.classList.add(`forum_paging_${sectionType}_extended`);
+
+            if (sectionType === 'header' || sectionType === 'pagectn') {
+                section.insertAdjacentElement('afterend', exSections);
+                exSections.appendChild(buttonContainerHeader);
+            } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
+                section.insertAdjacentElement('beforebegin', exSections);
+                exSections.appendChild(buttonContainerFooter);
+            }
+
+            setPagingCtrls(exSections, sectionType);
+        });
+    }
+
+    function updateFooterVisibility() {
+        const footerTypes = ['footer', 'fpagectn'];
+
+        footerTypes.forEach(type => {
+            const section = document.querySelector(`.forum_paging_${type}`);
+            const extended = document.querySelector(`.forum_paging_${type}_extended`);
+
+            if (window.endIndex === 0) {
+                if (section) section.style.display = 'none';
+                if (extended) extended.style.display = 'none';
+            } else {
+                if (section) section.style.display = '';
+                if (extended) extended.style.display = '';
+            }
+        });
+    }
+
     function addNickname(menu) {
         if (!menu || menu.querySelector(".nickname")) return;
 
@@ -516,91 +557,6 @@
         } else {
             menu.appendChild(nicknameTooltip);
         }
-    }
-
-    function filterTopics(showAll = false, showBlocked = false) {
-        const topics = document.querySelectorAll('.forum_topic');
-
-        topics.forEach(topic => {
-            if (topic.closest('.rightSectionTopTitle')) return;
-
-            topic.classList.remove('hidden-blocked-user', 'hidden-filtered');
-
-            if (isBlockedTopic(topic)) {
-                topic.style.display = (showAll || showBlocked) ? '' : 'none';
-                if (showAll || showBlocked) topic.classList.add('hidden-blocked-user');
-                return;
-            }
-
-            if (isFilteredTopic(topic)) {
-                topic.style.display = (showAll) ? '' : 'none';
-                if (showAll) topic.classList.add('hidden-filtered');
-                return;
-            }
-
-            topic.style.display = '';
-        });
-
-        initCounts();
-    }
-
-    function filterOP(showAll = false, showBlocked = false) {
-        const opWrapper = document.querySelector('.forum_op');
-        const blockedHiddenPost = document.querySelector('.forum_op [id^="forum_op_hidden_"]');
-        const blockedHiddenPostToggle = document.querySelector('.forum_op [id^="forum_op_showhidden_"]');
-        const blockedHiddenPostUnhide = document.querySelector('.forum_op .commentthread_show_deleted_link');
-
-        if (blockedHiddenPostUnhide && blockedHiddenPost && blockedHiddenPostToggle) {
-            const isBlockedOP = getComputedStyle(blockedHiddenPostToggle).display !== 'none';
-
-            blockedHiddenPostUnhide.addEventListener('click', () => {
-                opWrapper.classList.add('hidden-blocked-OP');
-            });
-
-            if (isBlockedOP) {
-                if (showAll || showBlocked) {
-                    blockedHiddenPostUnhide.click(); // Simulate Steam's "Show"
-                    opWrapper.classList.add('hidden-blocked-OP');
-                }
-            } else {
-                if (!(showAll || showBlocked)) {
-                    blockedHiddenPost.style.setProperty('display', 'none', 'important');
-                    blockedHiddenPostToggle.style.removeProperty('display');
-                    opWrapper.classList.remove('hidden-blocked-OP');
-                }
-            }
-        }
-    }
-
-    function filterComments(showAll = false, showBlocked = false) {
-        filterOP(showAll, showBlocked);
-
-        const comments = document.querySelectorAll('.commentthread_comment');
-
-        comments.forEach(comment => {
-            if (comment.classList.contains('commentthread_deleted_comment')) {
-                comment.remove();
-                return;
-            }
-
-            comment.classList.remove('hidden-blocked-user-comment', 'hidden-filtered-comment');
-
-            if (isBlockedComment(comment)) {
-                comment.style.display = (showAll || showBlocked) ? '' : 'none';
-                if (showAll || showBlocked) comment.classList.add('hidden-blocked-user-comment');
-                return;
-            }
-
-            if (isFilteredComment(comment)) {
-                comment.style.display = (showAll) ? '' : 'none';
-                if (showAll) comment.classList.add('hidden-filtered-comment');
-                return;
-            }
-
-            comment.style.display = '';
-        });
-
-        initCounts();
     }
 
 
@@ -712,61 +668,6 @@
         };
     }
 
-    function extendSections(sectionType) {
-        let querySelector = `.forum_paging.forum_paging_${sectionType}`;
-
-        if (sectionType === 'pagectn' || sectionType === 'fpagectn') {
-            querySelector = `.forum_paging[id$='_${sectionType}']`;
-        }
-
-        const sections = Array.from(document.querySelectorAll(querySelector)).filter(section => {
-            const isPageCtn = sectionType === 'pagectn' || sectionType === 'fpagectn';
-            if (isPageCtn) {
-                return section.id.endsWith(`_${sectionType}`);
-            } else {
-                return section.classList.contains(`forum_paging_${sectionType}`);
-            }
-        });
-
-        sections.forEach((section) => {
-            if (!section || window.getComputedStyle(section).display === 'none') return;
-
-            section.classList.add(`forum_paging_${sectionType}`);
-
-            const exSections = document.createElement('div');
-            exSections.classList.add(`forum_paging_${sectionType}_extended`);
-
-            if (sectionType === 'header' || sectionType === 'pagectn') {
-                section.insertAdjacentElement('afterend', exSections);
-                exSections.appendChild(buttonContainerHeader);
-            } else if (sectionType === 'footer' || sectionType === 'fpagectn') {
-                section.insertAdjacentElement('beforebegin', exSections);
-                exSections.appendChild(buttonContainerFooter);
-            }
-
-            setPagingCtrls(exSections, sectionType);
-        });
-    }
-
-    function updateFooterVisibility() {
-        const footerTypes = ['footer', 'fpagectn'];
-
-        footerTypes.forEach(type => {
-            const section = document.querySelector(`.forum_paging_${type}`);
-            const extended = document.querySelector(`.forum_paging_${type}_extended`);
-
-            if (window.endIndex === 0) {
-                if (section) section.style.display = 'none';
-                if (extended) extended.style.display = 'none';
-            } else {
-                if (section) section.style.display = '';
-                if (extended) extended.style.display = '';
-            }
-        });
-    }
-
-
-
     function setBtnContainer(btnType) {
         const buttonContainer = btnType === 'header' ? buttonContainerHeader : buttonContainerFooter;
         const pagingExtended = document.querySelector(`.forum_paging_${btnType}_extended`);
@@ -818,10 +719,110 @@
 
 
 
+    function filterTopics(showAll = false, showBlocked = false) {
+        const topics = document.querySelectorAll('.forum_topic');
+
+        topics.forEach(topic => {
+            if (topic.closest('.rightSectionTopTitle')) return;
+
+            topic.classList.remove('hidden-blocked-user', 'hidden-filtered');
+
+            if (isBlockedTopic(topic)) {
+                topic.style.display = (showAll || showBlocked) ? '' : 'none';
+                if (showAll || showBlocked) topic.classList.add('hidden-blocked-user');
+                return;
+            }
+
+            if (isFilteredTopic(topic)) {
+                topic.style.display = (showAll) ? '' : 'none';
+                if (showAll) topic.classList.add('hidden-filtered');
+                return;
+            }
+
+            topic.style.display = '';
+        });
+
+        initCounts();
+    }
+
+    function filterOP(showAll = false, showBlocked = false) {
+        const opWrapper = document.querySelector('.forum_op');
+        const blockedHiddenPost = document.querySelector('.forum_op [id^="forum_op_hidden_"]');
+        const blockedHiddenPostToggle = document.querySelector('.forum_op [id^="forum_op_showhidden_"]');
+        const blockedHiddenPostUnhide = document.querySelector('.forum_op .commentthread_show_deleted_link');
+
+        if (blockedHiddenPostUnhide && blockedHiddenPost && blockedHiddenPostToggle) {
+            const isBlockedOP = getComputedStyle(blockedHiddenPostToggle).display !== 'none';
+
+            blockedHiddenPostUnhide.addEventListener('click', () => {
+                opWrapper.classList.add('hidden-blocked-OP');
+            });
+
+            if (isBlockedOP) {
+                if (showAll || showBlocked) {
+                    blockedHiddenPostUnhide.click(); // Simulate Steam's "Show"
+                    opWrapper.classList.add('hidden-blocked-OP');
+                }
+            } else {
+                if (!(showAll || showBlocked)) {
+                    blockedHiddenPost.style.setProperty('display', 'none', 'important');
+                    blockedHiddenPostToggle.style.removeProperty('display');
+                    opWrapper.classList.remove('hidden-blocked-OP');
+                }
+            }
+        }
+    }
+
+    function filterComments(showAll = false, showBlocked = false) {
+        filterOP(showAll, showBlocked);
+
+        const comments = document.querySelectorAll('.commentthread_comment');
+
+        comments.forEach(comment => {
+            if (comment.classList.contains('commentthread_deleted_comment')) {
+                comment.remove();
+                return;
+            }
+
+            comment.classList.remove('hidden-blocked-user-comment', 'hidden-filtered-comment');
+
+            if (isBlockedComment(comment)) {
+                comment.style.display = (showAll || showBlocked) ? '' : 'none';
+                if (showAll || showBlocked) comment.classList.add('hidden-blocked-user-comment');
+                return;
+            }
+
+            if (isFilteredComment(comment)) {
+                comment.style.display = (showAll) ? '' : 'none';
+                if (showAll) comment.classList.add('hidden-filtered-comment');
+                return;
+            }
+
+            comment.style.display = '';
+        });
+
+        initCounts();
+    }
+
+
+
     function initCounts() {
         const { blockedCount, filteredCount: filteredCount } = countHiddenContent();
         displayCount(blockedCount, filteredCount);
     }
+
+    function watchUrl() {
+        window.addEventListener('popstate', () => {
+            initCounts();
+            setVisibleCount();
+        });
+
+        window.addEventListener('hashchange', () => {
+            initCounts();
+            setVisibleCount();
+        });
+    }
+
 
 
     if (window.location.hash === "#addnickname" && typeof ShowNicknameModal === "function") {
