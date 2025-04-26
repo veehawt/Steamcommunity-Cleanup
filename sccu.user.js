@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.8
+// @version      0.4.9
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -25,20 +25,6 @@
         //"cheat",
         //"devs",
         //"noob",
-    ];
-
-    // Regex trade patterns in topic titles to hide (disabled on trade forums)
-    const regexTrade = [
-        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bg\s*i\s*v\s*e\s*a\s*w\s*a\s*y\b))[^\w\s]*\b/i, // most common iterations of "free giveaway"
-        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bp\s*o+\s*i\s*n\s*t\s*s\b))[^\w\s]*\b/i, // "free points"
-        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bs\s*k(?:i|\|)n\s*s\b))[^\w\s]*\b/i, // "free skins"
-        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bi(?:t|\+)e\s*m(?:s|\$)\b))[^\w\s]*\b/i, // "free items"
-        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bk\s*n\s*i\s*[vf]\s*e\s*s\b))[^\w\s]*\b/i, // "free knife"
-        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bg\s*l\s*o\s*v\s*e\s*s\b))[^\w\s]*\b/i, // "free gloves"
-        /\b[^\w\s]*(?:w\s*t\s*b|w\s*t\s*s|w\s*t\s*t)[^\w\s]*\b/i, // most common iterations of  "wtb, wts, wtt"
-        /\bo+f{2,}e+r{1,}i?n?g?s?\b/i, // "offer, offering, offers"
-        /(?<![\w-])([HWhw]|\([HWhw]\)|\[[HWhw]\]|\{[HWhw]\}|<[HWhw]>|<[\(\[\{]?[HWhw][\)\]\}]?>)(?![\w-])/, // H W with various brackets
-        /\bopen (?:inventory|inv|trade)\b/i, // "open inventory/trade"
     ];
 
     // Regex language patterns in topic titles and topic comments to hide (disabled on trade forums)
@@ -65,6 +51,30 @@
         /[\+\-]?\s*rep\s*(for\s*[\+\-]?\s*rep|\bme\b)?\b/i, // +rep for rep
         /\bcomment\s+for\s+comment\b/, // comment for comment
     ];
+
+    // Regex trade patterns in topic titles to hide (disabled on trade forums)
+    const regexTrade = [
+        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bg\s*i\s*v\s*e\s*a\s*w\s*a\s*y\b))[^\w\s]*\b/i, // most common iterations of "free giveaway"
+        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bp\s*o+\s*i\s*n\s*t\s*s\b))[^\w\s]*\b/i, // "free points"
+        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bs\s*k(?:i|\|)n\s*s\b))[^\w\s]*\b/i, // "free skins"
+        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bi(?:t|\+)e\s*m(?:s|\$)\b))[^\w\s]*\b/i, // "free items"
+        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bk\s*n\s*i\s*[vf]\s*e\s*s\b))[^\w\s]*\b/i, // "free knife"
+        /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bg\s*l\s*o\s*v\s*e\s*s\b))[^\w\s]*\b/i, // "free gloves"
+        /\b[^\w\s]*(?:w\s*t\s*b|w\s*t\s*s|w\s*t\s*t)[^\w\s]*\b/i, // most common iterations of  "wtb, wts, wtt"
+        /\bo+f{2,}e+r{1,}i?n?g?s?\b/i, // "offer, offering, offers"
+        /(?<![\w-])([HWhw]|\([HWhw]\)|\[[HWhw]\]|\{[HWhw]\}|<[HWhw]>|<[\(\[\{]?[HWhw][\)\]\}]?>)(?![\w-])/, // H W with various brackets
+        /\bopen (?:inventory|inv|trade)\b/i, // "open inventory/trade"
+    ];
+
+    // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
+    const regexTradeIntend = /\b(check(?: my)? (?:inv|inventory)|downgrade|fast trade|float|giveaway|I have|I want|inventory|katowice|knife for knife|knife up for trade|loadout|lf\b|looking for(?: trade)?|open for trade|send trade|someone trade me|swap|trade(?:[-\s]?up)?|trading|trading full loadout|trading my knife|upgrade)\b/i;
+    const regexFinishes = /\b(asiimov|bloodsport|blue[\s-]?titanium|capillary|case[\s-]?hardened|crimson|doppler|fade|fire[\s-]?serpent|hyper[\s-]?beast|lore|marble|medusa|neo[\s-]?noir|night|print[\s-]?stream|redline|searing|slaughter|tiger[\s-]?tooth|vulcan|(?:black|blue|green|midnight|red)[\s-]?laminate)\b/i;
+    const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs)\b/i;
+    const regexWeapons = /\b(knife|bayonet|bowie|butterfly|flip|gut|huntsman|karambit|kukri|nomad|paracord|skeleton|gloves|driver|moto|specialist|sport|ak[-\s]?47|awp|famas|galil|g3sg1|m4a1[-\s]?s|m4a4|scar[-\s]?20|ssg|bizon|mac[-\s]?10|mp7|mp9|ump|mag[-\s]?7|nova|negev|cz75|deagle|desert eagle|five[-\s]?seven|glock|p250|tec[-\s]?9|usp[-\s]?s)\b/i;
+    const regexFloat = /\b0\.\d{2,9}\b/;
+    const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/i;
+    const regexTradeNegatives = /\b(can'?t|drops?|duo|help|hold|how|matchmaking|play|premier|scam|stolen|questions?|valve employee|why)\b/i;
+
 
     const scriptStyles = `
         .nickname img.nickname-icon {
@@ -195,8 +205,8 @@
     const isGeneralForum = !!isTopicsContainer;
     const isDiscussion   = !!isCommentsContainer;
 
-    let regexFilters         = isTradingForum ? regexSpam : [...regexTrade, ...regexLanguage, ...regexSpam];
-    let regexFiltersComments = isTradingForum ? regexSpam : [               ...regexLanguage, ...regexSpam];
+    let regexFiltersTopics   = isTradingForum ? regexSpam : [...regexLanguage, ...regexSpam, ...regexTrade];
+    let regexFiltersComments = isTradingForum ? regexSpam : [...regexLanguage, ...regexSpam];
 
     let showAllHeader = false;
     let showAllFooter = false;
@@ -206,6 +216,7 @@
     let headerBtnAll, footerBtnAll, headerBtnBlocked, footerBtnBlocked;
     let buttonContainerHeader, buttonContainerFooter;
     const buttonManager = createButtonStateManager();
+
 
 
     function isBlockedTopic(topic) {
@@ -218,7 +229,10 @@
 
         const text = topicName.textContent.trim();
 
-        return matchesCriteria(text, keywords, regexFilters);
+        const isRegexMatch = matchesCriteria(text, keywords, regexFiltersTopics);
+        const isTradeMatch = isTradeRelated(text);
+
+        return isRegexMatch || isTradeMatch;
     }
 
     function isBlockedComment(comment) {
@@ -250,6 +264,23 @@
     }
 
 
+    function isTradeRelated(content) {
+        const text = content.toLowerCase();
+        if (regexTradeNegatives.test(text)) return false;
+
+        const matches = [
+            regexTradeIntend.test(content),
+            regexFinishes.test(content),
+            regexWeapons.test(content),
+            regexWear.test(content),
+            regexFloat.test(content),
+            regexStatTrak.test(content)
+        ];
+
+        const matchCount = matches.filter(Boolean).length;
+
+        return matches[0] || matchCount >= 2;
+    }
 
     function matchesCriteria(text, keywordList, regexList) {
         for (let keyword of keywordList) {
