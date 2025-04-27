@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.12
+// @version      0.4.13
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -68,14 +68,14 @@
 
     // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
     const regexTradeIntent = new RegExp(String.raw`\b(
-        check(?: my)? (?:inv|inventory)|downgrade|fast trade|float|giveaway|I have|I want|inventory|katowice|
-        knife for knife|knife up for trade|loadout|lf\b|looking for(?: trade)?|open for trade|send trade|
-        someone trade me|swap|trade(?:[-\s]?up)?|trading|trading full loadout|trading my knife|upgrade
+        cases?|check(?: my)? (?:inv|inventory)|downgrade|upgrade|fast trades?|fair trades?|float|giveaway|give me|have|want|inventory|
+        katowice|kato|knife for knife|knife up for trade|loadout|lf\b|looking for(?: trade)?|open for trade|send trade|
+        someone trade me|skins?|swap|trade(?:[-\s]?up)?|trading|trading full loadout|trading my knife
       )\b`, 'i');
 
     const regexWeapons = new RegExp(String.raw`\b(
-        knife|bayonet|bowie|butterfly|flip|gut|huntsman|karambit|kukri|nomad|paracord|skeleton|
-        gloves|driver|moto|specialist|sport|ak[-\s]?47|awp|famas|galil|g3sg1|m4a1[-\s]?s|m4a4|scar[-\s]?20|ssg|
+        knives?|knifes?|bayonet|bowie|butterfly|flip|gut|huntsman|karambit|kukri|nomad|paracord|skeleton|
+        gloves?|driver|moto|specialist|sport|ak[-\s]?47|awp|famas|galil|g3sg1|m4a1[-\s]?s|m4a4|scar[-\s]?20|ssg|
         bizon|mac[-\s]?10|mp7|mp9|ump|mag[-\s]?7|nova|negev|cz75|deagle|desert eagle|five[-\s]?seven|glock|p250|tec[-\s]?9|usp[-\s]?s
       )\b`, 'i');
 
@@ -269,12 +269,12 @@
         if (regexTradeNegatives.test(text)) return false;
 
         const matches = [
-            regexTradeIntent.test(content),
-            regexFinishes.test(content),
-            regexWeapons.test(content),
-            regexWear.test(content),
-            regexFloat.test(content),
-            regexStatTrak.test(content)
+            regexTradeIntent.test(text),
+            regexFinishes.test(text),
+            regexWeapons.test(text),
+            regexWear.test(text),
+            regexFloat.test(text),
+            regexStatTrak.test(text)
         ];
 
         const matchCount = matches.filter(Boolean).length;
@@ -812,12 +812,10 @@
             createObserver({
                 target: menu,
                 config: { attributes: true, attributeFilter: ["style"] },
-                onMutation: (mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.attributeName === "style" && menu.style.display !== "none") {
-                            addNickname(menu);
-                        }
-                    });
+                onMutation: ([mutation]) => {
+                    if (mutation.attributeName === "style" && menu.style.display !== "none") {
+                        addNickname(menu);
+                    }
                 }
             });
         });
