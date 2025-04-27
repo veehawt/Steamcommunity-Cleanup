@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.11
+// @version      0.4.12
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -668,30 +668,6 @@
         };
     }
 
-    function setBtnContainer(btnType) {
-        const buttonContainer = btnType === 'header' ? buttonContainerHeader : buttonContainerFooter;
-        const pagingExtended = document.querySelector(`.forum_paging_${btnType}_extended`);
-        const pagingPageCtnExtended = document.querySelector(`.forum_paging_${btnType === 'header' ? 'pagectn' : 'fpagectn'}_extended`);
-
-        if (!buttonContainer) {
-            const container = document.createElement('div');
-            container.classList.add(`button-container-${btnType}`);
-            if (btnType === 'header') {
-                buttonContainerHeader = container;
-            } else if (btnType === 'footer') {
-                buttonContainerFooter = container;
-            }
-        }
-
-        if (pagingExtended && !pagingExtended.contains(buttonContainer)) {
-            pagingExtended.appendChild(buttonContainer);
-        }
-
-        if (pagingPageCtnExtended && !pagingPageCtnExtended.contains(buttonContainer)) {
-            pagingPageCtnExtended.appendChild(buttonContainer);
-        }
-    }
-
     function setPagingCtrls(newElement, controlType) {
         let pagingControls;
 
@@ -807,23 +783,73 @@
 
 
     function initCounts() {
-        const { blockedCount, filteredCount: filteredCount } = countHiddenContent();
+        const { blockedCount, filteredCount } = countHiddenContent();
         displayCount(blockedCount, filteredCount);
     }
 
-    function watchUrl() {
-        window.addEventListener('popstate', () => {
-            initCounts();
-            setVisibleCount();
-        });
 
-        window.addEventListener('hashchange', () => {
-            initCounts();
-            setVisibleCount();
+
+    function createObserver({ target, config, onMutation }) {
+        const observer = new MutationObserver(onMutation);
+        observer.observe(target, config);
+        return observer;
+    }
+
+    function runFilters() {
+        const headers = [buttonManager.getHeaderAll(), buttonManager.getHeaderBlocked()];
+        const footers = [buttonManager.getFooterAll(), buttonManager.getFooterBlocked()];
+        filterTopics(...headers, ...footers);
+        filterComments(...headers, ...footers);
+    }
+
+    const observedMenus = new WeakSet();
+
+    function observeActionMenu() {
+        document.querySelectorAll(".forum_comment_action_menu").forEach((menu) => {
+            if (observedMenus.has(menu)) return;
+            observedMenus.add(menu);
+
+            createObserver({
+                target: menu,
+                config: { attributes: true, attributeFilter: ["style"] },
+                onMutation: (mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === "style" && menu.style.display !== "none") {
+                            addNickname(menu);
+                        }
+                    });
+                }
+            });
         });
     }
 
+    createObserver({
+        target: isTopicsContainer || isCommentsContainer,
+        config: { childList: true, subtree: true },
+        onMutation: (mutations) => {
+            let topicsChanged = false;
+            let commentsChanged = false;
 
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.classList?.contains("forum_topic")) topicsChanged = true;
+                    if (node.classList?.contains("commentthread_comment") || node.classList?.contains("commentthread_deleted_expanded")) commentsChanged = true;
+                    if (node.classList?.contains("forum_comment_action_menu")) addNickname(node);
+                });
+            });
+
+            if (topicsChanged || commentsChanged) {
+                runFilters();
+            }
+            setVisibleCount();
+        }
+    });
+
+    createObserver({
+        target: document.body,
+        config: { childList: true, subtree: true },
+        onMutation: observeActionMenu,
+    });
 
     if (window.location.hash === "#addnickname" && typeof ShowNicknameModal === "function") {
         const nicknameElement = document.querySelector(".nickname");
@@ -831,97 +857,40 @@
 
         ShowNicknameModal(); // Already defined by Steam
 
-        const nicknameObserver = new MutationObserver((mutations, obs) => {
-            const nicknameInput = document.querySelector(".newmodal input[type='text']");
-
-            if (nicknameInput) {
-                const match = existingNickname.match(/^\((.*)\)$/);
-                nicknameInput.value = match ? match[1] : existingNickname;
-
-                obs.disconnect();
+        createObserver({
+            target: document.body,
+            config: { childList: true, subtree: true },
+            onMutation: (_, observer) => {
+                const nicknameInput = document.querySelector(".newmodal input[type='text']");
+                if (nicknameInput) {
+                    const match = existingNickname.match(/^\((.*)\)$/);
+                    nicknameInput.value = match ? match[1] : existingNickname;
+                    observer.disconnect();
+                }
             }
         });
-
-        nicknameObserver.observe(document.body, { childList: true, subtree: true });
     }
 
+    function init() {
+        initButtons();
+        extendSections('header');
+        extendSections('footer');
+        extendSections('pagectn');
+        extendSections('fpagectn');
+        filterTopics();
+        filterComments();
 
-    const observedMenus = new WeakSet();
-    const observeActionMenu = () => {
-        document.querySelectorAll(".forum_comment_action_menu").forEach((menu) => {
-            if (observedMenus.has(menu)) return;
-            observedMenus.add(menu);
-
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.attributeName === "style" && menu.style.display !== "none") {
-                        addNickname(menu);
-                    }
-                });
-            });
-
-            observer.observe(menu, { attributes: true, attributeFilter: ["style"] });
-        });
-    };
-
-
-    const menuContainer = document.body;
-    const menuObserver = new MutationObserver(() => {
-        observeActionMenu();
-    });
-
-    menuObserver.observe(menuContainer, { childList: true, subtree: true });
-
-
-    const observer = new MutationObserver((mutations) => {
-        let topicsChanged = false;
-        let commentsChanged = false;
-
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'childList') {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.classList?.contains("forum_topic")) topicsChanged = true;
-                    if (node.classList?.contains("commentthread_comment") || node.classList?.contains("commentthread_deleted_expanded")) commentsChanged = true;
-                    if (node.classList?.contains("forum_comment_action_menu")) addNickname(node);
-                });
-            }
-        });
-
-        if (topicsChanged || commentsChanged) {
-            filterTopics(
-                buttonManager.getHeaderAll(),
-                buttonManager.getHeaderBlocked(),
-                buttonManager.getFooterAll(),
-                buttonManager.getFooterBlocked()
-            );
-            filterComments(
-                buttonManager.getHeaderAll(),
-                buttonManager.getHeaderBlocked(),
-                buttonManager.getFooterAll(),
-                buttonManager.getFooterBlocked()
-            );
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', postInit);
+        } else {
+            postInit();
         }
+    }
 
+    function postInit() {
+        initCounts();
         setVisibleCount();
-    });
-
-    if (isTopicsContainer) {
-        observer.observe(isTopicsContainer, { childList: true, subtree: true });
     }
 
-    if (isCommentsContainer) {
-        observer.observe(isCommentsContainer, { childList: true, subtree: true });
-    }
-
-    initButtons();
-    extendSections('header');
-    extendSections('footer');
-    extendSections('pagectn');
-    extendSections('fpagectn');
-    setPagingCtrls();
-    filterTopics();
-    filterComments();
-    initCounts();
-    watchUrl();
-    setVisibleCount();
+    init();
 })();
