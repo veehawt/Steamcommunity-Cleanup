@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.15
+// @version      0.4.16
 // @description  UserScript that improves the Steam forums by hiding discussion topics.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -69,34 +69,33 @@
 
     // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
     const regexTradeIntent = new RegExp(String.raw`\b(
-        |cases?|check(?: my)? (?:inv+|inventory)|downgrade|upgrade|fast trades?|fair trades?|float|giveaway|give me|have|want|
-        |inventory|inv+|katowice|kato|knife for knife|knife up for trade|loadout|lf\b|looking for(?: trade)?|open for trade|open inv+|
-        |play[\s-]skins|send trade|someone trade me|skins?|store|swap|trade(?:[-\s]?up)?|trading|trading full loadout|trading my knife|
+        |cases?|check(?: my)? (?:inv+|inventory)|downgrade|upgrade|fast trades?|fair trades?|float|giveaway|give me|have|want|in stock|invent|inventory|inv+|katowice|kato|
+        |knife for knife|knife up for trade|loadout|lf\b|looking for(?: trade)?|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|personal trader|play[\s-]?skins|rare|send trade|someone trade me|
+        |skins?|store|swap|trade(?:[-\s]?up)?|trading|trading full loadout|trading my knife|
       )\b`, 'i');
 
     const regexWeapons = new RegExp(String.raw`\b(
-        |knives?|knifes?|bayonet|bowie|butterfly|flip|gut|huntsman|karambit|kukri|m9|nomad|paracord|skeleton|stiletto|survival|talon|ursus|
-        |gloves?|blood[\s-]hound|bloodhound|broken[\s-]fang|driver|hand[\s-]?wraps?|hydra|moto|specialist|sport|
+        |kni(fe|ve)(s|z)?|bayonet|bowie|butterfly|flip|gut|huntsman|karambit|kukri|m9|nomad|paracord|skeleton|stiletto|survival|talon|ursus|
+        |glove(s|z)?|blood[\s-]?hound|bloodhound|broken[\s-]?fang|driver|hand[\s-]?wraps?|hydra|moto|specialist|sport|
         |ak(?:[-\s]?47)?|aug|awp|famas|galil|g3sg1|m4a1[-\s]?s|m4a4|scar[-\s]?20|ssg|
         |bizon|mac[-\s]?10|mp7|mp9|ump|mag[-\s]?7|nova|negev|
         |cz75|deagle|desert eagle|dgl|five[-\s]?seven|glock|p250|tec[-\s]?9|usp[-\s]?s|
       )\b`, 'i');
 
     const regexFinishes = new RegExp(String.raw`\b(
-        |amphibious|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
-        |(?:(black|wild)[\s-]?)?lotus|black[\s-]?tie|blood[\s-]?pressure|bloodsport|blue[\s-]?gem|blue[\s-]?titanium|boreal[\s-]?forest|
-        |bright[\s-]?water||bronze(?:[\s-]?morph|d)|buckshot|capillary|cartel|case[\s-]?hard(?:ened|end)|charred|chrome[\s-]?cannon|
-        |chromatic[\s-]?abberation|caution|cobalt(?:[\s-]?skulls)?|commander|constrictor|convoy|cool[\s-]?mint|crimson(?:[\s-]?kimono)?|
-        |damascus|ddpat|(desert|scarlet)[\s-]?shamagh|diamondback|doppler|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|
-        |field[\s-]?agent|finish[\s-]?line|fever[\s-]?dream||fennec[\s-]?fox|fire[\s-]?serpent|forest|foundation|freehand|fuel[\s-]?injector|
-        |giraffe|gold[\s-]?arabesque|golden(?:[\s-]?(coil|koi))?|green[\s-]?energy|guerrilla|gungir|hedge(?:[\s-]?maze)?||hellfire|howl|
-        |hot[\s-]?rod|hyper[\s-]?beast|imperial(?:[\s-]?plaid)?|inheritance|icarus[\s-]?fell|jade|(?:king[\s-]?)?snake(?:bite)?|leather|
-        |(?:(lightning|tiger|serpent)[\s-]?)?strike|long(?:[\s-]?)dog||lore|lunar[\s-]?weave||marble(?:[\s-]?fade)?|mecha[\s-]?industries|
-        |mogul|modern[\s-]?hunter|moss[\s-]?quartz|mangrove|needle(?:[\s-]?point)?|night(?:[\s-]?(stripe|wish))?|nocts|neo[\s-]?noir|omega|
-        |overprint|overtake|pandora(?:'s?[\s-]?box|[\s-]?)?|polygon|poseidon|pow|print[\s-]?stream|(?:queen[\s-]?)?jaguar|
-        |radiation[\s-]?hazard|rattler|redline|rust[\s-]?coat|scrim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|
-        |(?:snow[\s-])?leopard|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|
-        |tilted|transport|turtle|ultraviolet|unhinged|vaporwave|vice|vulcan|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|
+        |amber[\s-]?fade)|amphibious|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
+        |(?:(black|wild)[\s-]?)?lotus|black[\s-]?tie|blood[\s-]?pressure|bloodsport|blue[\s-]?gem|blue[\s-]?titanium|boreal[\s-]?forest|bright[\s-]?water|
+        |bronze(?:[\s-]?morph|d)|buckshot|capillary|cartel|case[\s-]?hard(?:ened|end)|charred|chrome[\s-]?cannon|chromatic[\s-]?abberation|caution|
+        |cobalt(?:[\s-]?skulls)?|commander|constrictor|convoy|cool[\s-]?mint|crimson(?:[\s-]?kimono)?|damascus|ddpat|(desert|scarlet)[\s-]?shamagh|
+        |diamondback|doppler|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|field[\s-]?agent|finish[\s-]?line|fever[\s-]?dream|
+        |fennec[\s-]?fox|fire[\s-]?serpent|forest|foundation|freehand|fuel[\s-]?injector|giraffe|gold[\s-]?arabesque|golden(?:[\s-]?(coil|koi))?|
+        |green[\s-]?energy|guerrilla|gungir|hedge(?:[\s-]?maze)?||hellfire|howl|hot[\s-]?rod|hyper[\s-]?beast|imperial(?:[\s-]?plaid)?|inheritance|
+        |icarus[\s-]?fell|jade|(?:king[\s-]?)?snake(?:bite)?|leather|(?:(lightning|tiger|serpent)[\s-]?)?strike|long(?:[\s-]?)dog||lore|lunar[\s-]?weave|
+        |marble(?:[\s-]?fade)?|mecha[\s-]?industries|mogul|modern[\s-]?hunter|moss[\s-]?quartz|mangrove|needle(?:[\s-]?point)?|night(?:[\s-]?(stripe|wish))?|
+        |nocts|neo[\s-]?noir|omega|overprint|overtake|pandora(?:'s?[\s-]?box|[\s-]?)?|polygon|poseidon|pow|print[\s-]?stream|(?:queen[\s-]?)?jaguar|
+        |radiation[\s-]?hazard|rattler|redline|rust[\s-]?coat|scrim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|(?:snow[\s-])?leopard|spruce|
+        |stained|stratosphere|sunset[\s-]?storm|spearmint|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|tilted|transport|turtle|ultraviolet|unhinged|
+        |vaporwave|vice|vulcan|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|
       )\b`, 'i');
 
     const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs)\b/i;
@@ -104,9 +103,8 @@
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/i;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
-        |animation|best|can I|can you|can'?t|clans?|created|drops?|duo|trio|quad|friends?|help|hold|how|made|matchmaking|mm|partner|people|
-        |play|players?|premiere?|questions?|recruiting|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|should|team(?:mate|mates|m8s)?|mates?|
-        |m8s?|valve|what|when|where|which|who|why|wingman|
+        |animation|best|broken|can I|can you|can'?t|clans?|created|drops?|duo|trio|quad|friends?|help|hold|how|made|matchmaking|mm|partner|people|players?|premiere?|questions?|
+        |recruiting|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|should|team(?:mate|mates|m8s)?|mates?|m8s?|valve|what|when|where|which|who|why|wingman|work|
       )\b`, 'i');
 
 
@@ -290,7 +288,8 @@
         let normalized = content
         .toLowerCase()
         .normalize("NFKD")
-        .replace(/[^\p{L}\p{N}\s\-\.]/gu, '')
+        .replace(/[^\x00-\x7F]/g, ' ')
+        .replace(/[^\p{L}\p{N}\s\-\.]/gu, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 
