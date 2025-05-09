@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.17
+// @version      0.4.18
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -29,22 +29,22 @@
 
     // Regex language patterns in topic titles and topic comments to hide (disabled on trade forums)
     const regexLanguage = [
-        //["English and the basic Latin alphabet",                         /[A-Za-z]+/],
-        ["Cyrillic (Russian, Ukrainian, Bulgarian, Serbian etc.)",       /[\u0400-\u04FF]/],
-        ["Arabic",                                                       /[\u0600-\u06FF]/],
-        ["Hebrew",                                                       /[\u0590-\u05FF]/],
-        ["Chinese",                                                      /[\u4E00-\u9FFF]/],
-        ["Devanagari (Hindi, Marathi, Sanskrit, etc.)",                  /[\u0900-\u097F]/],
-        ["Thai",                                                         /[\u0E00-\u0E7F]/],
-        ["Korean",                                                       /[\uAC00-\uD7AF\u1100-\u11FF]/],
-        ["Japanese",                                                     /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/],
-        ["Vietnamese",                                                   /[ảạằắẳẵặỉĩịỏọồốổỗộờớởỡợủũụưừứửữựỷỹỵđ]/i],
-        ["Greek",                                                        /[\u0370-\u03FF]/],
-        ["Turkish",                                                      /[ğşşçıİĞŞÇ]/],
-        ["German, Estonian, Finnish, Hungarian (shared diacritics)",     /[ÄäÖöÜü]/],
-        ["Hungarian",                                                    /[ŐőŰű]/],
-        ["Polish",                                                       /[Łł]/],
-        ["Nordic (Danish, Finnish, Icelandic, Norwegian, Swedish)",      /[ÆæØøÅåÞþÐð]/]
+        //["English and the basic Latin alphabet",                               /[A-Za-z]+/],
+        ["Cyrillic (Russian, Ukrainian, Bulgarian, Serbian etc.)",              /[\u0400-\u04FF]/],
+        ["Arabic",                                                              /[\u0600-\u06FF]/],
+        ["Hebrew",                                                              /[\u0590-\u05FF]/],
+        ["Chinese",                                                             /[\u4E00-\u9FFF]/],
+        ["Devanagari (Hindi, Marathi, Sanskrit, etc.)",                         /[\u0900-\u097F]/],
+        ["Thai",                                                                /[\u0E00-\u0E7F]/],
+        ["Korean",                                                              /[\uAC00-\uD7AF\u1100-\u11FF]/],
+        ["Japanese",                                                            /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/],
+        ["Vietnamese",                                                          /[ảạằắẳẵặỉĩịỏọồốổỗộờớởỡợủũụưừứửữựỷỹỵđ]/i],
+        ["Greek",                                                               /[\u0370-\u03FF]/],
+        ["Turkish",                                                             /[ğşşçıİĞŞÇ]/],
+        ["Turkish, German, Estonian, Finnish, Hungarian (shared diacritics)",   /[ÄäÖöÜü]/],
+        ["Hungarian",                                                           /[ŐőŰű]/],
+        ["Polish",                                                              /[Łł]/],
+        ["Nordic (Danish, Finnish, Icelandic, Norwegian, Swedish)",             /[ÆæØøÅåÞþÐð]/],
     ];
 
     const regexSpam = [
@@ -63,7 +63,7 @@
         ["free keyword combination",                 /\bfree\s+(?:cases?|giveaway|gloves?|items?|k(?:nife|nives|nifes)|points|skins?)\b/i],
         ["WTB/WTS/WTT disguised spacing",            /\b[^\w\s]*(?:w\s*t\s*b|w\s*t\s*s|w\s*t\s*t)[^\w\s]*\b/i],
         ["variations of 'offer' / 'offering'",       /\bo+f{2,}e+r{1,}i?n?g?s?\b/i],
-        ["H/W (have/want) variants with brackets",   /(?<![\w-])([hw]|\([hw]\)|\[[hw]\]|\{[hw]\}|<[hw]>|<[\(\[\{]?[hw][\)\]\}]?>)(?![\w-])/],
+        ["H/W (have/want) variants with brackets",   /\b[\[\(\{\<\-\*\_]?([hw])[\]\)\}\>\-\*\_]?(\b|(?=\W))/i],
         ["open inventory/trade",                     /\bopen (?:inventory|inv|trade)\b/i],
     ];
 
@@ -71,8 +71,8 @@
     // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
     const regexTradeIntent = new RegExp(String.raw`\b(
         |capsules?|cases?|check(?: my)? (?:inv+|inventory)|downgrade|upgrade|fast trades?|fair trades?|fast response|giveaway|give me|I have|I want|in stock|
-        |invent|inventory|inv+|katowice|kato|knife for knife|for trade|loadout|lf\b|looking for(?: trade)?|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|
-        |personal trader|play[\s-]?skins|rare|send trade|someone trade me|skins?|stickers?|store|swap|trades?|trade(?:[-\s]?up)?|trading|trading full loadout|
+        |invent|inventory|inv+|katowice|kato|knife for knife|for trade|loadout|lf\b|looking for(?: trade)?|o+p+e+n+|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|
+        |personal trader|play[\s-]?skins|rare|send trade|someone trade me|skins?|stickers?|store|swap|t[r4]+[a@]+([i1]+)?[d+]+[e3]+s*|trade(?:[-\s]?up)?|trading|trading full loadout|
         |trading my knife|
       )\b`, 'i');
 
@@ -86,19 +86,19 @@
 
     const regexFinishes = new RegExp(String.raw`\b(
         |amber[\s-]?fade|amphibious|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
-        |(?:(black|wild)[\s-]?)?lotus|black[\s-]?tie|blood[\s-]?(pressure|sport)?|blue[\s-]?(gem|steel|titanium)|boreal[\s-]?forest|bright[\s-]?water|
+        |(?:(black|wild)[\s-]?)?lotus|black[\s-]?(pearl|tie)|blood[\s-]?(pressure|sport)?|blue[\s-]?(gem|steel|titanium)|boreal[\s-]?forest|bright[\s-]?water|
         |bronze(?:[\s-]?morph|d)|buckshot|capillary|cartel|case[\s-]?hard(?:ened|end)|charred|chrome[\s-]?cannon|chromatic[\s-]?abberation|caution|
         |cobalt(?:[\s-]?skulls)?|commander|conspiracy|constrictor|convoy|cool[\s-]?mint|cmyk|crakow|crimson(?:[\s-]?(kimono|web)?)?|damascus|ddpat|
-        |(desert|scarlet)[\s-]?shamagh|diamondback|doppler|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|empress|field[\s-]?agent|
+        |(desert|scarlet)[\s-]?shamagh|diamond(back)?|doppler|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|empress|fade|field[\s-]?agent|
         |finish[\s-]?line|fever[\s-]?dream|fennec[\s-]?fox|fire[\s-]?serpent|forest|foundation|freehand|fuel[\s-]?injector|giraffe|gold[\s-]?arabesque|
         |golden(?:[\s-]?(coil|koi))?|green[\s-]?energy|guerrilla|gungir|heat[\s-]?treated|hedge(?:[\s-]?maze)?|hellfire|howl|hot[\s-]?rod|hyper[\s-]?beast|
         |ice[\s-]?coaled|imperial(?:[\s-]?plaid)?|inheritance|icarus[\s-]?fell|jade|(?:king[\s-]?)?snake(?:bite)?|leather|
         |(?:(lightning|tiger|serpent)[\s-]?)?strike|long(?:[\s-]?)dog|lore|lunar[\s-]?weave|marble(?:[\s-]?fade)?|mecha[\s-]?industries|mogul|
         |modern[\s-]?hunter|moss[\s-]?quartz|mangrove|mulberry|needle(?:[\s-]?point)?|neon[\s-]?(revolution|rider)?|night(?:[\s-]?(mare|stripe|wish))?|nocts|
-        |neo[\s-]?noir|ocean[\s-]?drive|omega|overprint|overtake|pandora(?:'s?[\s-]?box|[\s-]?)?|phosphor|polygon|poseidon|pow|print[\s-]?stream|
-        |(?:queen[\s-]?)?jaguar|radiation[\s-]?hazard|rattler|redline|rust[\s-]?coat|scrim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|
+        |neo[\s-]?noir|ocean[\s-]?drive|omega|overprint|overtake|(?:p\s*([1-4])|phase\s*([1-4]))|pandora(?:'s?[\s-]?box|[\s-]?)?|phosphor|polygon|poseidon|pow|print[\s-]?stream|
+        |(?:queen[\s-]?)?jaguar|radiation[\s-]?hazard|rattler|red[\s-]?line|rub(y|ies)|rust[\s-]?coat|sapphires?|crim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|
         |(?:snow[\s-])?leopard|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|starcade|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|temukau|
-        |tilted|transport|turtle|ultraviolet|unhinged|vaporwave|vice|vulcan|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|
+        |tilted|transport|turtle|ultraviolet|unhinged|vaporwave|vice|vulcan|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|ibuypower|
       )\b`, 'i');
 
     const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/i;
@@ -106,11 +106,13 @@
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/i;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
-        |animation|best|broken(?![\s-]?fang)|bugs?|can I|can you|can'?t|clans?|crash(ed|es)?|created|crosshairs?|disappear(ed|ing|s)?|do you|drops?|
-        |duo|trio|quad|error|fix(ed|es)?|fps|friends?|glitch(ed|es)?|help|hold|how (can|do)?|idea|lags?|made|matchmaking|mm|not work(ing)?|opinions?|
-        |partner|people|players?|practice|premiere?|prices?|problems?|questions?|recruiting|resets?|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|
-        |should|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|should I|strats?|tactics?|thoughts?|training|unban|valve|what|when|where|which|who|why|
-        |wingman|work|would you|
+        |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|animation|aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
+        |back|badges?|bans?|because|(been|has) limited|best|black screen|(bring|brought) back|broken(?![\s-]?fang)|bugs?|can I|can you|cannot|chang(e|es|ing)|clans?|crash(ed|es)?|created|crosshairs?|deleted?|disappear(ed|ing|s)?|do (I|you)|drops?|
+        |duo|trio|quad|error|extend(?:ed|s|ion|ions)?|fix(ed|es)?|for \d+ days|fps|friends?|game store|glitch(ed|es)?|hard[\s-]?stuck|help|hid(e|ing)|histor(y|ies)hold|how (can|do)?|(I )?opened|idea|is (it|there)|lags?|let (me|us)|(?:re)?load(?:ing)?|
+        |made|matchmaking|mm|miss(ed|es|ing)?|name|no trad(e|es|ing)|not available|not work(ing)?|opinions?|options?|
+        |people|permission|phones?|players?|possibl(e|y)|practice|premiere?|prices?|problems?|questions?|recruiting|remove(d|s)?|reset(s|ted|ting)?|revamps?|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|
+        |should|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|rant(ing)?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|stop|store page|strats?|tactics?|thoughts?|to play\s+.+?(?:\s+with)?|training|unauthorized|unbans?|updates?|unexpected|us(e|es|ers|ing)|valve|wait(ing)? time|what|when|where|which|who|why|
+        |wingman|work(ing)?|would you|
       )\b`, 'i');
 
 
@@ -246,7 +248,7 @@
         }
     `;
 
-    const SCRIPT_VERSION = '0.4.17';
+    const SCRIPT_VERSION = '0.4.18';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -425,15 +427,19 @@
                 };
             })()
             : isTrade;
-    
+
         tradeCheckCache.set(content, result);
         return result;
     }
-    
 
 
 
     function filterTopics(showAll = devMode, showBlocked = false) {
+        if (devMode) {
+            const locationInfo = getForumLocationInfo();
+            console.groupCollapsed(`%cDev Log @ [${locationInfo}]`, 'color: gray;');
+        }
+
         const topics = document.querySelectorAll('.forum_topic');
 
         topics.forEach(topic => {
@@ -575,6 +581,43 @@
 
 
 
+    function getForumLocationInfo() {
+        let forumType = null;
+        let subForum = null;
+        let pageNumber = 1;
+
+        const breadcrumbs = document.querySelector('.group_breadcrumbs.discussions_breadcrumbs');
+        const appNameDiv = document.querySelector('.apphub_AppName');
+
+        if (breadcrumbs) {
+            forumType = "Steam Forums";
+
+            const selectedSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a');
+            if (selectedSubForum) {
+                subForum = selectedSubForum.textContent.trim();
+            }
+
+        } else if (appNameDiv) {
+            forumType = appNameDiv.textContent.trim();
+
+            const selectedGameSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a.whiteLink');
+            if (selectedGameSubForum) {
+                subForum = selectedGameSubForum.textContent.trim();
+            }
+        }
+
+        const activePage = document.querySelector('.forum_paging_pagelink.active');
+        if (activePage) {
+            pageNumber = parseInt(activePage.textContent.trim(), 10);
+        }
+
+        const locationInfo = [forumType, subForum, `Page ${pageNumber}`]
+        .filter(Boolean)
+        .join(' - ') || 'Unknown Forum Location';
+
+        return locationInfo;
+    }
+
     function logDevInfo({ raw, normalized, isTrade, matchCount, matchedByKey, tests }) {
         const styleLabel = 'color: #888; font-weight: bold;';
         const styleG = 'color: rgba(44, 165, 141, 1);';
@@ -681,11 +724,7 @@
         const text = parts.map(p => `%c${p.text}`).join('');
         const styles = parts.map(p => p.style);
 
-        if (devMode) {
-            console.groupCollapsed(text, ...styles);
-        } else {
-            console.log(text, ...styles);
-        }
+        console.log(text, ...styles);
     }
 
 
@@ -1067,6 +1106,7 @@
 
             if (topicsChanged || commentsChanged) {
                 runFilters();
+                getForumLocationInfo();
             }
             setVisibleCount();
         }
@@ -1099,6 +1139,8 @@
     }
 
     function init() {
+        logScriptBanner();
+        getForumLocationInfo();
         initButtons();
         extendSections('header');
         extendSections('footer');
@@ -1106,7 +1148,6 @@
         extendSections('fpagectn');
         filterTopics();
         filterComments();
-        logScriptBanner();
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', postInit);
