@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.18
+// @version      0.4.19
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -248,7 +248,7 @@
         }
     `;
 
-    const SCRIPT_VERSION = '0.4.18';
+    const SCRIPT_VERSION = '0.4.19';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -363,7 +363,10 @@
 
 
     function isBlockedTopic(topic) {
-        return topic.querySelector('.forum_topic_name.op_hidden');
+        const title = topic.querySelector('.forum_topic_name.op_hidden');
+        if (!title) return false;
+
+        return !!title.querySelector('.forum_topic_label');
     }
 
     function isFilteredTopic(topic) {
