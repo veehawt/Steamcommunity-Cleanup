@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.19
+// @version      0.4.20
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -49,7 +49,7 @@
 
     const regexSpam = [
         ["+rep for rep",          /\b[\+\-]?\s*rep\s*(for\s*[\+\-]?\s*rep|\bme\b)?\b/i],
-        ["comment for comment",   /\bcomment\s+for\s+comment\b/],
+        ["comment for comment",   /\bcomment\s+for\s+comment\b/i],
     ];
 
     // Regex trade patterns in topic titles to hide (disabled on trade forums)
@@ -70,19 +70,19 @@
 
     // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
     const regexTradeIntent = new RegExp(String.raw`\b(
-        |capsules?|cases?|check(?: my)? (?:inv+|inventory)|downgrade|upgrade|fast trades?|fair trades?|fast response|giveaway|give me|I have|I want|in stock|
+        |capsules?|cases?|check(?: my)? (?:inv+|inventory)|downgrade|upgrade|fast trades?|fair\s+(trade(s|z)?|deal(s|z)?)|fast response|giveaway|give me|I have|I want|in stock|
         |invent|inventory|inv+|katowice|kato|knife for knife|for trade|loadout|lf\b|looking for(?: trade)?|o+p+e+n+|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|
         |personal trader|play[\s-]?skins|rare|send trade|someone trade me|skins?|stickers?|store|swap|t[r4]+[a@]+([i1]+)?[d+]+[e3]+s*|trade(?:[-\s]?up)?|trading|trading full loadout|
         |trading my knife|
-      )\b`, 'i');
+      )\b`, 'gi');
 
     const regexWeapons = new RegExp(String.raw`\b(
-        |kni(fe|ve)(s|z)?|bayonet|bowie|butterfly|flip|gut|huntsman|karambit|kukri|m9|nomad|paracord|skeleton|stiletto|survival|talon|ursus|
+        |kni(fe|ve)(s|z)?|bayonet|bowie|bfk|butterfly|flip|gut|huntsman|kara(mbit)?|kukri|m9|nomad|paracord|skeleton|stiletto|survival|talon|ursus|
         |glove(s|z)?|blood[\s-]?hound|broken[\s-]?fang|driver|hand[\s-]?wraps?|hydra|moto|specialist|sport|
         |ak(?:[-\s]?47)?|aug|awp|famas|galil|g3sg1|m4|m4a1[-\s]?s|m4a4|a4|scar[-\s]?20|ssg|
         |bizon|mac[-\s]?10|mp7|mp9|ump|mag[-\s]?7|nova|negev|
         |cz75|deagle|desert eagle|dgl|five[-\s]?seven|glock|p2000|p250|tec[-\s]?9|usp[-\s]?s|
-      )\b`, 'i');
+      )\b`, 'gi');
 
     const regexFinishes = new RegExp(String.raw`\b(
         |amber[\s-]?fade|amphibious|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
@@ -99,11 +99,11 @@
         |(?:queen[\s-]?)?jaguar|radiation[\s-]?hazard|rattler|red[\s-]?line|rub(y|ies)|rust[\s-]?coat|sapphires?|crim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|
         |(?:snow[\s-])?leopard|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|starcade|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|temukau|
         |tilted|transport|turtle|ultraviolet|unhinged|vaporwave|vice|vulcan|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|ibuypower|
-      )\b`, 'i');
+      )\b`, 'gi');
 
-    const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/i;
-    const regexFloat = /\b(?:0)?\.\d{2,9}\b/;
-    const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/i;
+    const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/gi;
+    const regexFloat = /\b(?:0?\.\d{1,9}|1\.0{1,9})\b/g;
+    const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
         |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|animation|aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
@@ -113,7 +113,7 @@
         |people|permission|phones?|players?|possibl(e|y)|practice|premiere?|prices?|problems?|questions?|recruiting|remove(d|s)?|reset(s|ted|ting)?|revamps?|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|
         |should|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|rant(ing)?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|stop|store page|strats?|tactics?|thoughts?|to play\s+.+?(?:\s+with)?|training|unauthorized|unbans?|updates?|unexpected|us(e|es|ers|ing)|valve|wait(ing)? time|what|when|where|which|who|why|
         |wingman|work(ing)?|would you|
-      )\b`, 'i');
+      )\b`, 'gi');
 
 
     const scriptStyles = `
@@ -248,7 +248,7 @@
         }
     `;
 
-    const SCRIPT_VERSION = '0.4.19';
+    const SCRIPT_VERSION = '0.4.20';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -256,12 +256,12 @@
     styleSheet.innerText = scriptStyles;
     document.head.appendChild(styleSheet);
 
-    const isTradingForum      = window.location.href.includes('/tradingforum/');
-    const isTopicsContainer   = document.querySelector('.forum_topics_container');
+    const isTradingForum = window.location.href.includes('/tradingforum/');
+    const isTopicsContainer = document.querySelector('.forum_topics_container');
     const isCommentsContainer = document.querySelector('.commentthread_comment_container');
-
     const isGeneralForum = !!isTopicsContainer;
-    const isDiscussion   = !!isCommentsContainer;
+    const isDiscussion = !!isCommentsContainer;
+
 
     let regexFiltersTopics;
     if (isTradingForum && !devMode) {
@@ -277,7 +277,7 @@
         regexFiltersComments = [...regexLanguage, ...regexSpam];
     }
 
-    let currentEndIndex = 0;
+    const buttonManager = createButtonStateManager();
 
     let showAllHeader = false;
     let showAllFooter = false;
@@ -286,61 +286,58 @@
 
     let headerBtnAll, footerBtnAll, headerBtnBlocked, footerBtnBlocked;
     let buttonContainerHeader, buttonContainerFooter;
-    const buttonManager = createButtonStateManager();
+
+    let currentEndIndex = 0;
+
+    const patternWeights = {
+        intent: 4,
+        weapons: 2,
+        finishes: 2,
+        wear: 3,
+        float: 3,
+        stattrak: 2,
+        negatives: -3
+    };
 
 
 
     function normalizeContent(content) {
         return content
             .toLowerCase()
-            .normalize("NFKD")
-            .replace(/[^\x00-\x7F]/g, ' ')
-            .replace(/[^\p{L}\p{N}\s\-\.]/gu, ' ')
-            .replace(/\s+/g, ' ')
+            .normalize("NFKD") // strip accents and diacritics
+            .replace(/[^\p{ASCII}]/gu, ' ') // replace all non-ASCII characters (emojis, special symbols, etc.)
+            .replace(/[^\p{L}\p{N}\s\-\.?]/gu, ' ') // replace everything but letters, numbers, spaces, hypens, periods and question marks
+            .replace(/\s+/g, ' ') // collapse whitespaces
             .trim()
-            .replace(/\B\.(\d{2,9})\b/g, '0.$1');
     }
 
-    function getRegexMatches(normalized) {
-        const regexTests = {
+    function getTradeConfidenceScore(normalized) {
+        const regexTradeTests = {
             negatives: regexTradeNegatives,
             intent: regexTradeIntent,
-            finishes: regexFinishes,
             weapons: regexWeapons,
+            finishes: regexFinishes,
             wear: regexWear,
             float: regexFloat,
             stattrak: regexStatTrak
         };
 
-        const tests = {};
+        let score = 0;
+        const breakdown = {};
         const matchedByKey = {};
 
-        for (const [key, regex] of Object.entries(regexTests)) {
-            const match = normalized.match(regex);
-            tests[key] = !!match;
-            matchedByKey[key] = match || [];
+        for (const [key, regex] of Object.entries(regexTradeTests)) {
+            const matches = [...normalized.matchAll(regex)].map(m => m[0]);
+            const count = matches.length;
+            const weight = patternWeights[key] || 0;
+            const groupScore = count * weight;
+
+            score += groupScore;
+            breakdown[key] = { count, groupScore };
+            matchedByKey[key] = matches;
         }
 
-        return { tests, matchedByKey };
-    }
-
-    function getMatchedNegatives(normalized) {
-        const matches = normalized.match(regexTradeNegatives);
-        if (!matches) return [];
-        const unique = [...new Set(matches)];
-        return unique.map(m => `negatives → "${m}"`);
-    }
-
-    function computeIsTrade(tests) {
-        const { negatives, intent } = tests;
-        const matchCount = Object.entries(tests)
-        .filter(([key, value]) => key !== 'negatives' && value)
-        .length;
-
-        return {
-            isTrade: !negatives && (intent || matchCount >= 2),
-            matchCount
-        };
+        return { score, breakdown, matchedByKey };
     }
 
     function matchesCriteria(text, keywordList, regexList) {
@@ -376,8 +373,8 @@
         const text = topicName.textContent.trim();
         const tradeResult = isTradeRelated(text);
 
-        const isRegexMatch = matchesCriteria(text, keywords, regexFiltersTopics);
         const isTradeMatch = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
+        const isRegexMatch = matchesCriteria(text, keywords, regexFiltersTopics);
 
         return isRegexMatch || isTradeMatch;
     }
@@ -404,32 +401,43 @@
 
         const raw = content.toLowerCase();
         const normalized = normalizeContent(content);
-        const { tests, matchedByKey } = getRegexMatches(normalized);
-        const matchedNegatives = getMatchedNegatives(normalized);
-        const { isTrade, matchCount } = computeIsTrade(tests);
+
+        const {
+            score,
+            breakdown: scoreByKey,
+            matchedByKey,
+        } = getTradeConfidenceScore(normalized);
+
+        const isTrade = score >= 3;
+        let isRegexMatch = false;
+
+        for (const [_, pattern] of [...regexLanguage, ...regexSpam, ...regexTrade]) {
+            if (pattern.test(raw)) {
+                isRegexMatch = true;
+                break;
+            }
+        }
 
         const result = devMode
-            ? (() => {
-                const isBlocked = topic && isBlockedTopic(topic);
-                if (!isBlocked) {
-                    logDevInfo({
-                        raw,
-                        normalized,
-                        isTrade,
-                        matchCount,
-                        matchedByKey,
-                        matchedNegatives,
-                        tests
-                    });
-                }
-                return {
-                    normalized,
-                    isTrade,
-                    matchCount,
-                    ...tests
-                };
-            })()
-            : isTrade;
+        ? (() => {
+            const isBlocked = topic && isBlockedTopic(topic);
+            const debugInfo = {
+                raw,
+                normalized,
+                isTrade,
+                score,
+                scoreByKey,
+                matchedByKey,
+                isRegexMatch,
+            };
+
+            if (!isBlocked) {
+                logDevInfo(debugInfo);
+            }
+
+            return debugInfo;
+        })()
+        : isTrade;
 
         tradeCheckCache.set(content, result);
         return result;
@@ -621,96 +629,93 @@
         return locationInfo;
     }
 
-    function logDevInfo({ raw, normalized, isTrade, matchCount, matchedByKey, tests }) {
+    function logDevInfo({ raw, normalized, isTrade, isRegexMatch, matchedByKey = {}, score = 0, scoreByKey = {} }) {
         const styleLabel = 'color: #888; font-weight: bold;';
         const styleG = 'color: rgba(44, 165, 141, 1);';
         const styleB = 'color: rgba(118, 85, 116, 1);';
         const styleNormal = 'color: #54a5d4;';
 
-        function renderMatchLine(label, match, isNegative = false) {
-            const labelStyle = styleLabel;
-            const matchStyle = match
+        function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0) {
+            const baseStyle = matches.length
                 ? (isNegative ? styleG : styleB)
                 : styleNormal;
-            const matchText = match ? `"${match}"` : '""';
+
+            const matchText = matches.join(', ');
+
+            let weightText = '';
+            if (weightSum) {
+                const weightDisplay = isNegative
+                    ? `(-${Math.abs(weightSum)})`
+                    : `(+${weightSum})`;
+
+                weightText = ` %c${weightDisplay}`;
+            }
 
             return {
-                text: `%c${label} → %c${matchText}`,
-                styles: [labelStyle, matchStyle]
+                text: `%c${label}: %c${matchText}${weightText}`,
+                styles: [styleLabel, baseStyle, ...(weightText ? [styleLabel] : [])]
             };
         }
 
         const lines = [];
 
-        if (matchedByKey.negatives[0]) {
-            lines.push(renderMatchLine('negatives', matchedByKey.negatives[0], true));
-        }
-
-        for (const key of ['intent', 'finishes', 'weapons', 'wear', 'float', 'stattrak']) {
-            const match = matchedByKey[key][0];
-            if (match) {
-                lines.push(renderMatchLine(key, match, false));
-            }
-        }
-
-        const keywordMatch = keywords.find(k => raw.includes(k));
-        if (keywordMatch) {
-            lines.push(renderMatchLine('keyword', keywordMatch));
-        }
-
         for (const [description, pattern] of regexLanguage) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('language', match[0] + ` // ${description}`));
+                lines.push(renderMatchLine('language', [`${match[0]} // ${description}`]));
                 break;
             }
         }
-
         for (const [description, pattern] of regexSpam) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('spam', `${match[0]} // ${description}`));
+                lines.push(renderMatchLine('spam', [`${match[0]} // ${description}`]));
                 break;
             }
         }
-
         for (const [description, pattern] of regexTrade) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('trade', `${match[0]} // ${description}`));
+                lines.push(renderMatchLine('trade', [`${match[0]} // ${description}`]));
                 break;
             }
         }
 
-        if (lines.length === 0) {
-            lines.push({ text: `%cnone`, styles: [styleLabel] });
+        const tradeKeys = ['intent', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
+        for (const key of tradeKeys) {
+            const matches = matchedByKey[key] || [];
+            const weight = scoreByKey[key]?.groupScore ?? 0;
+            const isNegative = key === 'negatives';
+            if (matches.length) {
+                lines.push(renderMatchLine(key, matches, isNegative, weight));
+            }
         }
 
-        const useNormalized = isTrade || tests.negatives || matchCount > 0;
-        const title = useNormalized ? normalized : raw;
+        const qualitative = score < 0 ? 'very unlikely'
+            : score < 3 ? 'unlikely'
+            : score < 6 ? 'likely'
+            : 'very likely';
 
-        const headerLines = [];
+        const scoreColor = score >= 3 ? styleB : styleG;
+        const qualitativeColor = score >= 3 ? styleB : styleG;
 
-        if (useNormalized) {
-            headerLines.push(
-                `%cisTrade:%c ${isTrade}  ` +
-                `%cnegatives:%c ${tests.negatives}  ` +
-                `%cmatches:%c ${matchCount}`
-    );
-        }
+        lines.push({
+            text: `%cTrade-related score: %c${score} %c- %c${qualitative}`,
+            styles: [styleLabel, scoreColor, styleLabel, qualitativeColor]
+        });
 
-        console.groupCollapsed(`%c"${title}"`, styleNormal);
+        console.groupCollapsed(`%c"${raw}"`, styleNormal);
+        console.log(`%cNormalized:%c "${normalized}"`, styleLabel, styleNormal);
+
         console.log(
-            `%c"${title}"\n` +
-            headerLines.concat(lines.map(line => line.text)).join('\n'),
-            styleNormal,
-            ...(useNormalized ? [
-                styleLabel, isTrade ? styleB : styleG,
-                styleLabel, tests.negatives ? styleG : styleB,
-                styleLabel, styleNormal
-            ] : []),
-            ...lines.flatMap(line => line.styles)
+            `%cisTrade:%c ${isTrade}   %cisRegex:%c ${isRegexMatch}`,
+            styleLabel, isTrade ? styleB : styleG,
+            styleLabel, isRegexMatch ? styleB : styleG
         );
+
+        for (const line of lines) {
+            console.log(line.text, ...line.styles);
+        }
 
         console.groupEnd();
     }
@@ -801,19 +806,19 @@
 
     function setVisibleCount() {
         const pageStart = document.querySelector(
-            'span[id^="forum_General_"][id$="_pagestart"], ' +
+            'span[id^="forum_"][id$="_pagestart"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_pagestart"]'
         );
         const pageEnd = document.querySelector(
-            'span[id^="forum_General_"][id$="_pageend"], ' +
+            'span[id^="forum_"][id$="_pageend"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_pageend"]'
         );
         const pageStartFooter = document.querySelector(
-            'span[id^="forum_General_"][id$="_footerpagestart"], ' +
+            'span[id^="forum_"][id$="_footerpagestart"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_fpagestart"]'
         );
         const pageEndFooter = document.querySelector(
-            'span[id^="forum_General_"][id$="_footerpageend"], ' +
+            'span[id^="forum_"][id$="_footerpageend"], ' +
             '[id^="commentthread_ForumTopic_"][id$="_fpageend"]'
         );
         const summaryDivs = document.querySelectorAll(
@@ -832,9 +837,11 @@
     }
 
     function getVisibleCount() {
-        return isDiscussion
-            ? document.querySelectorAll('.commentthread_comment:not([style*="display: none"])').length
-            : document.querySelectorAll('.forum_topic:not([style*="display: none"])').length;
+        if (isDiscussion) {
+            return document.querySelectorAll('.commentthread_comment:not([style*="display: none"])').length;
+        } else {
+            return document.querySelectorAll('.forum_topic:not([style*="display: none"])').length;
+        }
     }
 
     function getPageStartIndex(span) {
@@ -945,16 +952,12 @@
 
         if (controlType === 'header' || controlType === 'pagectn') {
             pagingControls = document.querySelector(
-                '[id^="forum_General_"][id$="_pagecontrols"], ' +
-                '[id^="forum_Workshop_"][id$="_pagecontrols"], ' +
-                '[id^="forum_Trading_"][id$="_pagecontrols"], ' +
+                '[id^="forum_"][id$="_pagecontrols"], ' +
                 '[id^="commentthread_ForumTopic_"][id$="_pagecontrols"]'
             );
         } else if (controlType === 'footer' || controlType === 'fpagectn') {
             pagingControls = document.querySelector(
-                '[id^="forum_General_"][id$="_footerpagecontrols"], ' +
-                '[id^="forum_Workshop_"][id$="_footerpagecontrols"], ' +
-                '[id^="forum_Trading_"][id$="_footerpagecontrols"], ' +
+                '[id^="forum_"][id$="_footerpagecontrols"], ' +
                 '[id^="commentthread_ForumTopic_"][id$="_fpagecontrols"]'
             );
         }
