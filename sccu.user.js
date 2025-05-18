@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.25
+// @version      0.4.26
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -258,13 +258,22 @@
         }
     `;
 
-    const SCRIPT_VERSION = '0.4.25';
-    const devMode = false;
-    const tradeCheckCache = new Map();
-
     const styleSheet = document.createElement("style");
     styleSheet.innerText = scriptStyles;
     document.head.appendChild(styleSheet);
+
+    const logStyles = {
+        label: 'color: #888; font-weight: bold;',
+        default: 'color: #54a5d4;',
+        keyword: 'color: #d3a588;',
+        regex: 'color: #765574;',
+        trade: 'color: #2ca58d;',
+    };
+
+
+    const SCRIPT_VERSION = '0.4.26';
+    const devMode = false;
+    const tradeCheckCache = new Map();
 
     const isTradingForum = window.location.href.includes('/tradingforum/');
     const isTopicsContainer = document.querySelector('.forum_topics_container');
@@ -418,72 +427,6 @@
         return distance <= maxAllowed;
     }
 
-    function getTradeConfidenceScore(normalized, skipFuzzy = false) {
-        const scoreBreakdown = {};
-        const matchedByKey = {};
-        const fuzzyMatchByKey = {};
-
-        const tokens = normalized.split(/\s+/);
-        const allExactMatches = new Set();
-        let totalScore = 0;
-
-        for (const [key, regex] of Object.entries(regexTradeTests)) {
-
-            let matches = [...normalized.matchAll(regex)].map(m => m[0]);
-            matchedByKey[key] = matches;
-            matches.forEach(m => allExactMatches.add(m));
-
-            if (key === 'float') {
-                matches = matches.filter((match) => {
-                    const idx = normalized.indexOf(match);
-                    const before = normalized.slice(Math.max(0, idx - 3), idx);
-                    const after = normalized.slice(idx + match.length, idx + match.length + 3);
-                    return !/[\d]\.[\d]/.test(before + match + after);
-                });
-                matchedByKey[key] = matches;
-            }
-
-            let exactCount = matches.length;
-            let fuzzyCount = 0;
-            let fuzzyMatches = [];
-
-            const allowFuzzy = !skipFuzzy && fuzzyRegexTermsByKey[key] && exactCount === 0;
-            if (allowFuzzy) {
-                fuzzyMatches = getFuzzyMatchesForKey(tokens, fuzzyRegexTermsByKey[key], allExactMatches, key);
-                fuzzyCount = key === 'intent' ? Math.min(1, fuzzyMatches.length) : fuzzyMatches.length;
-                fuzzyMatchByKey[key] = fuzzyMatches;
-            } else {
-                fuzzyMatchByKey[key] = [];
-            }
-
-            if (key === 'intent') {
-                exactCount = Math.min(1, exactCount);
-                if (exactCount === 1) fuzzyCount = 0;
-            }
-
-            const weight = patternWeights[key] || 0;
-            let groupScore = 0;
-
-            if (key === 'negatives') {
-                for (let i = 0; i < exactCount + fuzzyCount; i++) {
-                    groupScore -= Math.max(0, 3 - i);
-                }
-            } else {
-                groupScore = (exactCount + fuzzyCount * 0.5) * weight;
-            }
-
-            scoreBreakdown[key] = { count: exactCount, fuzzyCount, groupScore };
-            totalScore += groupScore;
-        }
-
-        return {
-            score: totalScore,
-            breakdown: scoreBreakdown,
-            matchedByKey,
-            fuzzyMatchByKey
-        };
-    }
-
     function getFuzzyMatchesForKey(tokens, regexTermList, allExactMatches) {
         const fuzzyMatches = [];
         const usedFuzzyTokens = new Set();
@@ -540,36 +483,6 @@
         initCounts();
     }
 
-    function applyTopicClasses(topic, keywordMatch, regexMatch, tradeMatch, showAll) {
-        topic.classList.remove(
-            'filtered-keywords',
-            'filtered-regex',
-            'filtered-trade-related',
-            'filtered-regex-trade-related'
-        );
-
-        const isFiltered = keywordMatch || regexMatch || tradeMatch;
-
-
-        if (devMode) {
-            if (regexMatch && tradeMatch) {
-                topic.classList.add('filtered-regex-trade-related');
-            } else if (regexMatch) {
-                topic.classList.add('filtered-regex');
-            } else if (tradeMatch) {
-                topic.classList.add('filtered-trade-related');
-            }
-
-            if (keywordMatch) {
-                topic.classList.add('filtered-keywords');
-            }
-        } else if (isFiltered) {
-            topic.classList.add('filtered-regex');
-        }
-
-        topic.style.display = showAll || !isFiltered ? '' : 'none';
-    }
-
     function isKeywords(text, keywordList) {
         const keywordMatches = keywordList.filter(keyword =>
                                                   text.toLowerCase().includes(keyword.toLowerCase())
@@ -593,49 +506,6 @@
             regexMatches
         };
     }
-
-
-
-    function isBlockedTopic(topic) {
-        const title = topic.querySelector('.forum_topic_name.op_hidden');
-        if (!title) return false;
-
-        const label = title.querySelector('.forum_topic_label');
-        if (!label) return false;
-
-        const allowedLabels = ['pinned', 'announcement', 'sticky'];
-        const labelText = label.textContent.trim().toLowerCase();
-
-        return !allowedLabels.some(allowed => labelText.includes(allowed));
-    }
-
-    function isBlockedComment(comment) {
-        return comment.classList.contains('commentthread_deleted_expanded');
-    }
-
-    function isFilteredComment(comment) {
-        if (isBlockedComment(comment)) return false;
-
-        const commentText = comment.querySelector('.commentthread_comment_text');
-        if (!commentText) return false;
-
-        const textClone = commentText.cloneNode(true);
-        textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
-        const cleanedText = textClone.textContent.trim();
-
-        if (!cleanedText) return false;
-
-        const { isMatch, regexMatches } = isRegex(cleanedText, regexFiltersComments);
-
-        if (isMatch) {
-            console.log('%cFiltered comment matched:', 'color:red;font-weight:bold;', cleanedText);
-            console.log('Matched by regex:', regexMatches);
-            return true;
-        }
-
-        return false;
-    }
-
 
     function isTradeRelated(content, topic = null, precomputedRegexMatch = false, keywordMatches = [], skipFuzzy = false) {
         if (isTradingForum && !devMode) return false;
@@ -684,44 +554,69 @@
     }
 
 
-    function getDebugResult({
-        raw,
-        normalized,
-        isTrade,
-        score,
-        confidence,
-        scoreByKey: breakdown,
-        matchedByKey,
-        fuzzyMatchByKey,
-        isRegexMatch,
-        keywordMatches,
-        skipFuzzy
-    }) {
+    function getTradeConfidenceScore(normalized, skipFuzzy = false) {
+        const scoreBreakdown = {};
+        const matchedByKey = {};
+        const fuzzyMatchByKey = {};
 
-        const debugInfo = {
-            raw,
-            normalized,
-            isTrade,
-            score,
-            confidence,
-            scoreByKey: breakdown,
-            matchedByKey,
-            fuzzyMatchByKey,
-            isRegexMatch,
-            isKeywordMatch: keywordMatches?.length > 0,
-            keywordMatches,
-        };
+        const tokens = normalized.split(/\s+/);
+        const allExactMatches = new Set();
+        let totalScore = 0;
 
-        const cacheKey = normalized;
+        for (const [key, regex] of Object.entries(regexTradeTests)) {
+            let matches = [...normalized.matchAll(regex)].map(m => m[0]);
+            matchedByKey[key] = matches;
+            matches.forEach(m => allExactMatches.add(m));
 
-        if (skipFuzzy) {
-            pendingDevLogs.set(cacheKey, debugInfo);
-        } else {
-            logDevInfo(debugInfo);
-            pendingDevLogs.delete(cacheKey);
+            if (key === 'float') {
+                matches = matches.filter((match) => {
+                    const idx = normalized.indexOf(match);
+                    const before = normalized.slice(Math.max(0, idx - 3), idx);
+                    const after = normalized.slice(idx + match.length, idx + match.length + 3);
+                    return !/[\d]\.[\d]/.test(before + match + after);
+                });
+                matchedByKey[key] = matches;
+            }
+
+            let exactCount = matches.length;
+            let fuzzyCount = 0;
+            let fuzzyMatches = [];
+
+            const allowFuzzy = !skipFuzzy && fuzzyRegexTermsByKey[key] && exactCount === 0;
+            if (allowFuzzy) {
+                fuzzyMatches = getFuzzyMatchesForKey(tokens, fuzzyRegexTermsByKey[key], allExactMatches, key);
+                fuzzyCount = key === 'intent' ? Math.min(1, fuzzyMatches.length) : fuzzyMatches.length;
+                fuzzyMatchByKey[key] = fuzzyMatches;
+            } else {
+                fuzzyMatchByKey[key] = [];
+            }
+
+            if (key === 'intent') {
+                exactCount = Math.min(1, exactCount);
+                if (exactCount === 1) fuzzyCount = 0;
+            }
+
+            const weight = patternWeights[key] || 0;
+            let groupScore = 0;
+
+            if (key === 'negatives') {
+                for (let i = 0; i < exactCount + fuzzyCount; i++) {
+                    groupScore -= Math.max(0, 3 - i);
+                }
+            } else {
+                groupScore = (exactCount + fuzzyCount * 0.5) * weight;
+            }
+
+            scoreBreakdown[key] = { count: exactCount, fuzzyCount, groupScore };
+            totalScore += groupScore;
         }
 
-        return debugInfo;
+        return {
+            score: totalScore,
+            breakdown: scoreBreakdown,
+            matchedByKey,
+            fuzzyMatchByKey
+        };
     }
 
     function getConfidenceLevel(score) {
@@ -731,6 +626,78 @@
         return 'very likely';
     }
 
+
+    function isBlockedTopic(topic) {
+        const title = topic.querySelector('.forum_topic_name.op_hidden');
+        if (!title) return false;
+
+        const label = title.querySelector('.forum_topic_label');
+        if (!label) return false;
+
+        const allowedLabels = ['pinned', 'announcement', 'sticky'];
+        const labelText = label.textContent.trim().toLowerCase();
+
+        return !allowedLabels.some(allowed => labelText.includes(allowed));
+    }
+
+    function isBlockedComment(comment) {
+        return comment.classList.contains('commentthread_deleted_expanded');
+    }
+
+    function isFilteredComment(comment) {
+        if (isBlockedComment(comment)) return false;
+
+        const commentText = comment.querySelector('.commentthread_comment_text');
+        if (!commentText) return false;
+
+        const textClone = commentText.cloneNode(true);
+        textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
+        const cleanedText = textClone.textContent.trim();
+
+        if (!cleanedText) return false;
+
+        const { isMatch, regexMatches } = isRegex(cleanedText, regexFiltersComments);
+
+        if (isMatch) {
+            console.log('%cFiltered comment matched:', 'color:red;font-weight:bold;', cleanedText);
+            console.log('Matched by regex:', regexMatches);
+            return true;
+        }
+
+        return false;
+    }
+
+
+
+    function applyTopicClasses(topic, keywordMatch, regexMatch, tradeMatch, showAll) {
+        topic.classList.remove(
+            'filtered-keywords',
+            'filtered-regex',
+            'filtered-trade-related',
+            'filtered-regex-trade-related'
+        );
+
+        const isFiltered = keywordMatch || regexMatch || tradeMatch;
+
+
+        if (devMode) {
+            if (regexMatch && tradeMatch) {
+                topic.classList.add('filtered-regex-trade-related');
+            } else if (regexMatch) {
+                topic.classList.add('filtered-regex');
+            } else if (tradeMatch) {
+                topic.classList.add('filtered-trade-related');
+            }
+
+            if (keywordMatch) {
+                topic.classList.add('filtered-keywords');
+            }
+        } else if (isFiltered) {
+            topic.classList.add('filtered-regex');
+        }
+
+        topic.style.display = showAll || !isFiltered ? '' : 'none';
+    }
 
     function filterTopics(showAll = devMode, showBlocked = false) {
         if (devMode) {
@@ -873,78 +840,43 @@
 
 
 
-    function getForumLocationInfo() {
-        let forumType = null;
-        let subForum = null;
-        let pageNumber = 1;
-
-        const breadcrumbs = document.querySelector('.group_breadcrumbs.discussions_breadcrumbs');
-        const appNameDiv = document.querySelector('.apphub_AppName');
-
-        if (breadcrumbs) {
-            forumType = "Steam Forums";
-
-            const selectedSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a');
-            if (selectedSubForum) {
-                subForum = selectedSubForum.textContent.trim();
-            }
-
-        } else if (appNameDiv) {
-            forumType = appNameDiv.textContent.trim();
-
-            const selectedGameSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a.whiteLink');
-            if (selectedGameSubForum) {
-                subForum = selectedGameSubForum.textContent.trim();
-            }
-        }
-
-        const activePage = document.querySelector('.forum_paging_pagelink.active');
-        if (activePage) {
-            pageNumber = parseInt(activePage.textContent.trim(), 10);
-        }
-
-        const locationInfo = [forumType, subForum, `Page ${pageNumber}`]
-        .filter(Boolean)
-        .join(' - ') || 'Unknown Forum Location';
-
-        return locationInfo;
-    }
-
-    const logStyles = {
-        label: 'color: #888; font-weight: bold;',
-        default: 'color: #54a5d4;',
-        keyword: 'color: #d3a588;',
-        regex: 'color: #765574;',
-        trade: 'color: #2ca58d;',
-    };
-
-    function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
-        let baseStyle;
-        if (overrideStyle) {
-            baseStyle = overrideStyle;
-        } else if (matches.length) {
-            baseStyle = isNegative ? logStyles.default : logStyles.trade;
-        } else {
-            baseStyle = logStyles.default;
-        }
-
-        const matchText = matches.join(', ');
-
-        let weightText = '';
-        if (weightSum) {
-            let weightDisplay;
-            if (isNegative) {
-                weightDisplay = `(-${Math.abs(weightSum)})`;
-            } else {
-                weightDisplay = `(+${weightSum})`;
-            }
-            weightText = ` %c${weightDisplay}`;
-        }
-
-        return {
-            text: `%c${label}: %c${matchText}${weightText}`,
-            styles: [logStyles.label, baseStyle, ...(weightText ? [baseStyle] : [])]
+    function getDebugResult({
+        raw,
+        normalized,
+        isTrade,
+        score,
+        confidence,
+        scoreByKey: breakdown,
+        matchedByKey,
+        fuzzyMatchByKey,
+        isRegexMatch,
+        keywordMatches,
+        skipFuzzy
+    }) {
+        const debugInfo = {
+            raw,
+            normalized,
+            isTrade,
+            score,
+            confidence,
+            scoreByKey: breakdown,
+            matchedByKey,
+            fuzzyMatchByKey,
+            isRegexMatch,
+            isKeywordMatch: keywordMatches?.length > 0,
+            keywordMatches,
         };
+
+        const cacheKey = normalized;
+
+        if (skipFuzzy) {
+            pendingDevLogs.set(cacheKey, debugInfo);
+        } else {
+            logDevInfo(debugInfo);
+            pendingDevLogs.delete(cacheKey);
+        }
+
+        return debugInfo;
     }
 
     function logKeywordMatches(keywordMatches) {
@@ -1014,6 +946,71 @@
         return lines;
     }
 
+    function getForumLocationInfo() {
+        let forumType = null;
+        let subForum = null;
+        let pageNumber = 1;
+
+        const breadcrumbs = document.querySelector('.group_breadcrumbs.discussions_breadcrumbs');
+        const appNameDiv = document.querySelector('.apphub_AppName');
+
+        if (breadcrumbs) {
+            forumType = "Steam Forums";
+
+            const selectedSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a');
+            if (selectedSubForum) {
+                subForum = selectedSubForum.textContent.trim();
+            }
+
+        } else if (appNameDiv) {
+            forumType = appNameDiv.textContent.trim();
+
+            const selectedGameSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a.whiteLink');
+            if (selectedGameSubForum) {
+                subForum = selectedGameSubForum.textContent.trim();
+            }
+        }
+
+        const activePage = document.querySelector('.forum_paging_pagelink.active');
+        if (activePage) {
+            pageNumber = parseInt(activePage.textContent.trim(), 10);
+        }
+
+        const locationInfo = [forumType, subForum, `Page ${pageNumber}`]
+        .filter(Boolean)
+        .join(' - ') || 'Unknown Forum Location';
+
+        return locationInfo;
+    }
+
+    function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
+        let baseStyle;
+        if (overrideStyle) {
+            baseStyle = overrideStyle;
+        } else if (matches.length) {
+            baseStyle = isNegative ? logStyles.default : logStyles.trade;
+        } else {
+            baseStyle = logStyles.default;
+        }
+
+        const matchText = matches.join(', ');
+
+        let weightText = '';
+        if (weightSum) {
+            let weightDisplay;
+            if (isNegative) {
+                weightDisplay = `(-${Math.abs(weightSum)})`;
+            } else {
+                weightDisplay = `(+${weightSum})`;
+            }
+            weightText = ` %c${weightDisplay}`;
+        }
+
+        return {
+            text: `%c${label}: %c${matchText}${weightText}`,
+            styles: [logStyles.label, baseStyle, ...(weightText ? [baseStyle] : [])]
+        };
+    }
 
     function logDevInfo({
         raw,
