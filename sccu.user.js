@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.26
+// @version      0.4.27
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -163,8 +163,7 @@
             color: #fff !important;
         }
         .blocked-user {
-            border-left: 2px solid #f84972;
-            border-right: 2px solid #f84972;
+            box-shadow: inset 2px 0 0 #f84972, inset -2px 0 0 #f84972;
             background-color: rgba(118, 85, 116, 0.5);
         }
         .blocked-user:hover {
@@ -174,8 +173,8 @@
             background-color: #2b2230 !important;
         }
         .blocked-user-OP {
-            background: #2b2230 !important;
-            border: 1px solid #30242b;
+            background: linear-gradient(to bottom right, #3a2c3f, #1a141c) !important;
+            border: 1px solid #1e161f !important;
         }
         .filtered-keywords {
             background-color: rgba(211, 165, 136, 0.5);
@@ -271,7 +270,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.26';
+    const SCRIPT_VERSION = '0.4.27';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -308,7 +307,9 @@
 
     const fuzzyRegexTermsByKey = Object.fromEntries(
         Object.entries(regexTradeTests)
-        .filter(([key]) => key !== 'float' && key !== 'negatives')
+        .filter(([key]) =>
+                ['intent', 'weapons', 'finishes'].includes(key)
+               )
         .map(([key, regex]) => [key, extractTermsFromRegex(regex)])
     );
 
