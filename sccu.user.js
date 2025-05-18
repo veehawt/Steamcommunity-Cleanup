@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.23
+// @version      0.4.24
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -162,42 +162,42 @@
             background: linear-gradient( -60deg, #417a9b 5%, #67c1f5 95%);
             color: #fff !important;
         }
-        .hidden-filtered {
+        .filtered-regex {
             background-color: rgba(118, 85, 116, 0.5);
         }
-        .hidden-filtered:hover {
+        .filtered-regex:hover {
             background-color: rgba(141, 102, 139, 0.8);
         }
-        .hidden-filtered-comment {
+        .filtered-regex-comment {
             background-color: rgba(67, 47, 67, 0.5) !important;
         }
-        .hidden-blocked-user {
+        .blocked-user {
             border-left: 2px solid #f84972;
             border-right: 2px solid #f84972;
             background-color: rgba(118, 85, 116, 0.5);
         }
-        .hidden-blocked-user:hover {
+        .blocked-user:hover {
             background-color: rgba(141, 102, 139, 0.8);
         }
-        .hidden-blocked-user-comment {
+        .blocked-user-comment {
             background-color: #2b2230 !important;
         }
-        .hidden-blocked-OP {
+        .blocked-user-OP {
             background: #2b2230 !important;
             border: 1px solid #30242b;
         }
-        .hidden-trade-related {
+        .filtered-trade-related {
             background-color: rgba(44, 165, 141, 0.5) !important;
         }
-        .hidden-trade-related:hover {
+        .filtered-trade-related:hover {
             background-color: rgba(54, 187, 169, 0.8) !important;
         }
-        .hidden-trade-related-filtered {
+        .filtered-regex-trade-related {
             background: linear-gradient(50deg, rgba(118, 85, 116, 0.5) 15%, 45%, rgba(44, 165, 141, 0.5)) 30%;
             border: 1px solid transparent;
             border-image: linear-gradient(80deg, rgba(118, 85, 116, 0.8), rgba(44, 165, 141, 0.8)) 1;
         }
-        .hidden-trade-related-filtered:hover {
+        .filtered-regex-trade-related:hover {
             background: linear-gradient(50deg, rgba(141, 102, 139, 0.8) 15%, 45%, rgba(54, 187, 169, 0.8)) 30%;
         }
         .forum_paging_header_extended,
@@ -251,7 +251,7 @@
         }
     `;
 
-    const SCRIPT_VERSION = '0.4.23';
+    const SCRIPT_VERSION = '0.4.24';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -307,6 +307,8 @@
     let buttonContainerHeader, buttonContainerFooter;
 
     let currentEndIndex = 0;
+
+    const pendingDevLogs = new Map();
 
     const patternWeights = {
         intent: 4,
@@ -457,7 +459,7 @@
 
             if (key === 'negatives') {
                 for (let i = 0; i < exactCount + fuzzyCount; i++) {
-                    groupScore -= Math.max(0, 3 - i); // -3, -2, -1 then 0
+                    groupScore -= Math.max(0, 3 - i);
                 }
             } else {
                 groupScore = (exactCount + fuzzyCount * 0.5) * weight;
@@ -505,7 +507,7 @@
 
         topics.forEach(topic => {
             if (topic.closest('.rightSectionTopTitle')) return;
-            if (topic.classList.contains('hidden-blocked-user')) return;
+            if (topic.classList.contains('blocked-user')) return;
 
             const topicName = topic.querySelector('.forum_topic_name');
             if (!topicName) return;
@@ -522,27 +524,31 @@
             applyTopicClasses(topic, tradeMatch, regexMatch, showAll);
         });
 
+        if (devMode) {
+            console.groupEnd();
+        }
+
         initCounts();
     }
 
     function applyTopicClasses(topic, tradeMatch, regexMatch, showAll) {
         topic.classList.remove(
-            'hidden-filtered',
-            'hidden-trade-related',
-            'hidden-trade-related-filtered'
+            'filtered-regex',
+            'filtered-trade-related',
+            'filtered-regex-trade-related'
         );
 
         if (devMode) {
             if (tradeMatch && regexMatch) {
-                topic.classList.add('hidden-trade-related-filtered');
+                topic.classList.add('filtered-regex-trade-related');
             } else if (tradeMatch) {
-                topic.classList.add('hidden-trade-related');
+                topic.classList.add('filtered-trade-related');
             } else if (regexMatch) {
-                topic.classList.add('hidden-filtered');
+                topic.classList.add('filtered-regex');
             }
         } else {
             if (tradeMatch || regexMatch) {
-                topic.classList.add('hidden-filtered');
+                topic.classList.add('filtered-regex');
             }
         }
 
@@ -603,6 +609,8 @@
     }
 
     function isTradeRelated(content, topic = null, precomputedRegexMatch = false, keywordMatches = [], skipFuzzy = false) {
+        if (isTradingForum && !devMode) return false;
+
         const cacheKey = `${content}::${skipFuzzy ? 'nofuzzy' : 'full'}`;
         if (tradeCheckCache.has(cacheKey)) {
             return tradeCheckCache.get(cacheKey);
@@ -613,37 +621,84 @@
 
         const {
             score,
-            breakdown: scoreByKey,
+            breakdown,
             matchedByKey,
             fuzzyMatchByKey,
         } = getTradeConfidenceScore(normalized, skipFuzzy);
 
         const isTrade = score >= 3;
+        const confidence = getConfidenceLevel(score);
         const isRegexMatch = precomputedRegexMatch;
 
-        const result = devMode
-        ? (() => {
-            const isBlocked = topic && isBlockedTopic(topic);
-            const debugInfo = {
+        let result;
+        if (devMode) {
+            result = getDebugResult({
                 raw,
                 normalized,
                 isTrade,
                 score,
-                scoreByKey,
+                confidence,
+                scoreByKey: breakdown,
                 matchedByKey,
                 fuzzyMatchByKey,
                 isRegexMatch,
                 keywordMatches,
-            };
-            if (!isBlocked) {
-                logDevInfo(debugInfo);
-            }
-            return debugInfo;
-        })()
-        : isTrade;
+                topic,
+                skipFuzzy
+            });
+        } else {
+            result = isTrade;
+        }
 
         tradeCheckCache.set(cacheKey, result);
         return result;
+    }
+
+
+    function getDebugResult({
+        raw,
+        normalized,
+        isTrade,
+        score,
+        confidence,
+        scoreByKey: breakdown,
+        matchedByKey,
+        fuzzyMatchByKey,
+        isRegexMatch,
+        keywordMatches,
+        skipFuzzy
+    }) {
+
+        const debugInfo = {
+            raw,
+            normalized,
+            isTrade,
+            score,
+            confidence,
+            scoreByKey: breakdown,
+            matchedByKey,
+            fuzzyMatchByKey,
+            isRegexMatch,
+            keywordMatches,
+        };
+
+        const cacheKey = normalized;
+
+        if (skipFuzzy) {
+            pendingDevLogs.set(cacheKey, debugInfo);
+        } else {
+            logDevInfo(debugInfo);
+            pendingDevLogs.delete(cacheKey);
+        }
+
+        return debugInfo;
+    }
+
+    function getConfidenceLevel(score) {
+        if (score < 0) return 'very unlikely';
+        if (score < 3) return 'unlikely';
+        if (score < 6) return 'likely';
+        return 'very likely';
     }
 
 
@@ -660,14 +715,14 @@
             if (topic.closest('.rightSectionTopTitle')) return;
 
             topic.classList.remove(
-                'hidden-blocked-user',
-                'hidden-filtered',
-                'hidden-trade-related',
-                'hidden-trade-related-filtered'
+                'blocked-user',
+                'filtered-regex',
+                'filtered-trade-related',
+                'filtered-regex-trade-related'
             );
 
             if (isBlockedTopic(topic)) {
-                topic.classList.add('hidden-blocked-user');
+                topic.classList.add('blocked-user');
                 topic.style.display = (showAll || showBlocked) ? '' : 'none';
                 return;
             }
@@ -687,9 +742,6 @@
             applyTopicClasses(topic, tradeMatch, regexMatch, showAll);
         });
 
-        if (devMode) {
-            console.groupEnd();
-        }
         initCounts();
 
         setTimeout(() => applyFuzzyEnhancement(showAll, showBlocked), 50);
@@ -711,16 +763,16 @@
                 return;
             }
 
-            comment.classList.remove('hidden-blocked-user-comment', 'hidden-filtered-comment');
+            comment.classList.remove('blocked-user-comment', 'filtered-regex-comment');
 
             if (isBlockedComment(comment)) {
-                comment.classList.add('hidden-blocked-user-comment');
+                comment.classList.add('blocked-user-comment');
                 comment.style.display = (showAll || showBlocked) ? '' : 'none';
                 return;
             }
 
             if (isFilteredComment(comment)) {
-                comment.classList.add('hidden-filtered-comment');
+                comment.classList.add('filtered-regex-comment');
                 comment.style.display = (showAll) ? '' : 'none';
                 return;
             }
@@ -741,19 +793,19 @@
             const isBlockedOP = getComputedStyle(blockedHiddenPostToggle).display !== 'none';
 
             blockedHiddenPostUnhide.addEventListener('click', () => {
-                opWrapper.classList.add('hidden-blocked-OP');
+                opWrapper.classList.add('blocked-user-OP');
             });
 
             if (isBlockedOP) {
                 if (showAll || showBlocked) {
                     blockedHiddenPostUnhide.click(); // Simulate Steam's "Show"
-                    opWrapper.classList.add('hidden-blocked-OP');
+                    opWrapper.classList.add('blocked-user-OP');
                 }
             } else {
                 if (!(showAll || showBlocked)) {
                     blockedHiddenPost.style.setProperty('display', 'none', 'important');
                     blockedHiddenPostToggle.style.removeProperty('display');
-                    opWrapper.classList.remove('hidden-blocked-OP');
+                    opWrapper.classList.remove('blocked-user-OP');
                 }
             }
         }
@@ -826,66 +878,82 @@
         return locationInfo;
     }
 
-    function logDevInfo({ raw, normalized, isTrade, isRegexMatch, matchedByKey = {}, fuzzyMatchByKey = {}, score = 0, scoreByKey = {}, keywordMatches = [] }) {
-        const styleLabel = 'color: #888; font-weight: bold;';
-        const styleRed = 'color: #765574;';
-        const styleGreen = 'color: #2ca58d;';
-        const styleBlue = 'color: #54a5d4;';
+    const logStyles = {
+        label: 'color: #888; font-weight: bold;',
+        default: 'color: #54a5d4;',
+        regex: 'color: #765574;',
+        trade: 'color: #2ca58d;',
+        fuzzy: 'color: #9e77cf;'
+    };
 
-        function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
-            const baseStyle = overrideStyle
-            ?? (matches.length
-                ? (isNegative ? styleBlue : styleGreen)
-                : styleBlue);
+    function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
+        let baseStyle;
+        if (overrideStyle) {
+            baseStyle = overrideStyle;
+        } else if (matches.length) {
+            baseStyle = isNegative ? logStyles.default : logStyles.trade;
+        } else {
+            baseStyle = logStyles.default;
+        }
 
-            const matchText = matches.join(', ');
+        const matchText = matches.join(', ');
 
-            let weightText = '';
-            if (weightSum) {
-                const weightDisplay = isNegative
-                    ? `(-${Math.abs(weightSum)})`
-                    : `(+${weightSum})`;
-                weightText = ` %c${weightDisplay}`;
+        let weightText = '';
+        if (weightSum) {
+            let weightDisplay;
+            if (isNegative) {
+                weightDisplay = `(-${Math.abs(weightSum)})`;
+            } else {
+                weightDisplay = `(+${weightSum})`;
             }
-
-            return {
-                text: `%c${label}: %c${matchText}${weightText}`,
-                styles: [styleLabel, baseStyle, ...(weightText ? [baseStyle] : [])]
-            };
+            weightText = ` %c${weightDisplay}`;
         }
 
+        return {
+            text: `%c${label}: %c${matchText}${weightText}`,
+            styles: [logStyles.label, baseStyle, ...(weightText ? [baseStyle] : [])]
+        };
+    }
+
+    function logKeywordMatches(keywordMatches) {
         const lines = [];
-
-        if (keywordMatches.length) {
-            lines.push({
-                text: `%ckeywords: %c${keywordMatches.join(', ')}`,
-                styles: [styleLabel, styleRed],
-            });
+        if (keywordMatches?.length) {
+            lines.push(renderMatchLine('keyword', keywordMatches, false, 0, logStyles.regex));
         }
 
+        return lines;
+    }
+
+    function logRegexMatches(raw) {
+        const lines = [];
         for (const [description, pattern] of regexLanguage) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('language', [`${match[0]} // ${description}`], false, 0, styleRed));
+                lines.push(renderMatchLine('language', [`${match[0]} // ${description}`], false, 0, logStyles.regex));
                 break;
             }
         }
         for (const [description, pattern] of regexSpam) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('spam', [`${match[0]} // ${description}`], false, 0, styleRed));
+                lines.push(renderMatchLine('spam', [`${match[0]} // ${description}`], false, 0, logStyles.regex));
                 break;
             }
         }
         for (const [description, pattern] of regexTrade) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('trade', [`${match[0]} // ${description}`], false, 0, styleRed));
+                lines.push(renderMatchLine('trade', [`${match[0]} // ${description}`], false, 0, logStyles.regex));
                 break;
             }
         }
+        return lines;
+    }
 
+    function logTradeMatches(matchedByKey, scoreByKey) {
         const tradeKeys = ['intent', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
+        const lines = [];
+
         for (const key of tradeKeys) {
             const matches = matchedByKey[key] || [];
             const weight = scoreByKey[key]?.groupScore ?? 0;
@@ -894,6 +962,12 @@
                 lines.push(renderMatchLine(key, matches, isNegative, weight));
             }
         }
+
+        return lines;
+    }
+
+    function logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey) {
+        const lines = [];
 
         if (fuzzyMatchByKey && typeof fuzzyMatchByKey === 'object') {
             for (const key of Object.keys(fuzzyMatchByKey)) {
@@ -905,51 +979,96 @@
             }
         }
 
-        const hasTradeMatches = tradeKeys.some(key => {
-            const count = (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0);
-            return count > 0;
-        });
+        return lines;
+    }
+
+
+    function logDevInfo({
+        raw,
+        normalized,
+        isTrade,
+        isRegexMatch,
+        matchedByKey = {},
+        fuzzyMatchByKey = {},
+        score = 0,
+        scoreByKey = {},
+        keywordMatches = [],
+        confidence
+    }) {
+        const lines = [];
+
+        lines.push(...logKeywordMatches(keywordMatches));
+        lines.push(...logRegexMatches(raw));
+        lines.push(...logTradeMatches(matchedByKey, scoreByKey));
+        lines.push(...logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey));
+
+        const tradeKeys = ['intent', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
+        const hasTradeMatches = tradeKeys.some(key =>
+                                               (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
+                                              );
 
         if (hasTradeMatches) {
-            const qualitative = score < 0 ? 'very unlikely'
-                : score < 3 ? 'unlikely'
-                : score < 6 ? 'likely'
-                : 'very likely';
-
-            const scoreColor = score >= 3 ? styleGreen : styleBlue;
-            const qualitativeColor = score >= 3 ? styleGreen : styleBlue;
-
+            const scoreColor = score >= 3 ? logStyles.trade : logStyles.default;
+            const qualitativeColor = score >= 3 ? logStyles.trade : logStyles.default;
             lines.push({
-                text: `%cTrade-related score: %c${score} %c- %c${qualitative}`,
-                styles: [styleLabel, scoreColor, styleLabel, qualitativeColor]
+                text: `%cTrade-related score: %c${score} %c- %c${confidence}`,
+                styles: [logStyles.label, scoreColor, logStyles.label, qualitativeColor]
             });
         }
 
         let label = `"${raw}"`;
-        let groupStyle = styleLabel;
+        const coreTags = [];
 
-        const keywordPart = keywordMatches?.length ? 'Keyword' : '';
-        const regexPart = isRegexMatch && !keywordPart ? 'Regex' : '';
-        const filterLabel = [keywordPart, regexPart].filter(Boolean).join('+');
+        if (keywordMatches?.length) coreTags.push('Keyword');
+        if (isRegexMatch) coreTags.push('Regex');
+        if (isTrade) coreTags.push('Trade');
 
-        if (isRegexMatch && isTrade) {
-            label += ` [${filterLabel}+Trade]`;
-            groupStyle = 'color: #d17842; font-weight: bold;';
-        } else if (isRegexMatch) {
-            label += ` [${filterLabel}]`;
-            groupStyle = styleRed;
-        } else if (isTrade) {
-            label += ' [Trade]';
-            groupStyle = styleGreen;
+        const hasFuzzyMatches = Object.values(fuzzyMatchByKey || {}).some(arr => arr.length > 0);
+
+        if (coreTags.length) {
+            label += ` %c[%c${coreTags.join('+')}%c]%c`;
+        }
+        if (hasFuzzyMatches) {
+            label += ` %c[%cF%cu%cz%cz%cy%c]%c`;
         }
 
-        console.groupCollapsed(`%c${label}`, groupStyle);
-        console.log(`%cNormalized:%c "${normalized}"`, styleLabel, styleBlue);
+        let groupStyleMain = logStyles.label;
+        if (isTrade && isRegexMatch) {
+            groupStyleMain = 'color: #d17842; font-weight: bold;';
+        } else if (isTrade) {
+            groupStyleMain = logStyles.trade;
+        } else if (isRegexMatch) {
+            groupStyleMain = logStyles.regex;
+        }
 
+        const styleArgs = [groupStyleMain];
+        if (coreTags.length) {
+            styleArgs.push(
+                groupStyleMain, // [
+                groupStyleMain, // content
+                groupStyleMain, // ]
+                groupStyleMain
+            );
+        }
+        if (hasFuzzyMatches) {
+            styleArgs.push(
+                'color: #ff0000;', // [
+                'color: #ff1a00;', // F
+                'color: #ff5500;', // u
+                'color: #ff8800;', // z
+                'color: #ffaa00;', // z
+                'color: #ffcc00;', // y
+                'color: #ffee00;', // ]
+                logStyles.label
+            );
+        }
+
+        console.groupCollapsed(`%c${label}`, ...styleArgs);
+        console.log(`%cNormalized:%c "${normalized}"`, logStyles.label, logStyles.default);
         console.log(
             `%cisRegex:%c ${isRegexMatch}   %cisTrade:%c ${isTrade}`,
-            styleLabel, isRegexMatch ? styleRed : styleLabel,
-            styleLabel, isTrade ? styleGreen : styleLabel
+            logStyles.label, isRegexMatch ? logStyles.regex : logStyles.label,
+            logStyles.label, isTrade ? logStyles.trade : logStyles.label
         );
 
         for (const line of lines) {
@@ -986,14 +1105,14 @@
             topics.forEach(topic => {
                 if (topic.closest('.rightSectionTopTitle')) return;
 
-                if (topic.classList.contains('hidden-blocked-user')) {
+                if (topic.classList.contains('blocked-user')) {
                     blockedCount++;
                 }
 
                 if (
-                    topic.classList.contains('hidden-filtered') ||
-                    topic.classList.contains('hidden-trade-related') ||
-                    topic.classList.contains('hidden-trade-related-filtered')
+                    topic.classList.contains('filtered-regex') ||
+                    topic.classList.contains('filtered-trade-related') ||
+                    topic.classList.contains('filtered-regex-trade-related')
                 ) {
                     filteredCount++;
                 }
@@ -1004,11 +1123,11 @@
             const comments = document.querySelectorAll('.commentthread_comment');
 
             comments.forEach(comment => {
-                if (comment.classList.contains('hidden-blocked-user-comment')) {
+                if (comment.classList.contains('blocked-user-comment')) {
                     blockedCount++;
                 }
 
-                if (comment.classList.contains('hidden-filtered-comment')) {
+                if (comment.classList.contains('filtered-regex-comment')) {
                     filteredCount++;
                 }
             });
