@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.20
+// @version      0.4.21
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -65,39 +65,40 @@
         ["variations of 'offer' / 'offering'",       /\bo+f{2,}e+r{1,}i?n?g?s?\b/i],
         ["H/W (have/want) variants with brackets",   /\b[\[\(\{\<\-\*\_]?([hw])[\]\)\}\>\-\*\_]?(\b|(?=\W))/i],
         ["open inventory/trade",                     /\bopen (?:inventory|inv|trade)\b/i],
+        ["currency-prefixed or -suffixed numbers",   /\b\d{1,3}(?:[.,]\d{1,3})?k[\s]?[€$£¥]?|[€$£¥][\s]?\d{1,3}(?:[.,]\d{1,3})?k\b|\b\d{1,6}[\s]?[€$£¥]|[€$£¥][\s]?\d{1,6}\b/i],
     ];
 
 
     // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
     const regexTradeIntent = new RegExp(String.raw`\b(
-        |capsules?|cases?|check(?: my)? (?:inv+|inventory)|downgrade|upgrade|fast trades?|fair\s+(trade(s|z)?|deal(s|z)?)|fast response|giveaway|give me|I have|I want|in stock|
-        |invent|inventory|inv+|katowice|kato|knife for knife|for trade|loadout|lf\b|looking for(?: trade)?|o+p+e+n+|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|
-        |personal trader|play[\s-]?skins|rare|send trade|someone trade me|skins?|stickers?|store|swap|t[r4]+[a@]+([i1]+)?[d+]+[e3]+s*|trade(?:[-\s]?up)?|trading|trading full loadout|
-        |trading my knife|
+        |buy(ing)?|capsules?|cases?|check(?: my)? (?:inv+|inventory)|downgrades?|upgrades?|fast trade(s|z)?|fair\s+(trade(s|z)?|deal(s|z)?)|fast response|full loadout|giveaway|give me|have|want|in stock|
+        |invent(ory)?|inv+|kato(wice)?|knife for knife|for trade|loadout|lf\b|looking for(?: trade)?|o+p+e+n+|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|
+        |personal trader|rare|send trade|someone trade me|stickers?|store|swap|t[r4]+[a@]+([i1]+)?[d+]+[e3]+[sr]?|trade(?:[-\s]?up)?|trading|
+        |zero to knife|
       )\b`, 'gi');
 
     const regexWeapons = new RegExp(String.raw`\b(
-        |kni(fe|ve)(s|z)?|bayonet|bowie|bfk|butterfly|flip|gut|huntsman|kara(mbit)?|kukri|m9|nomad|paracord|skeleton|stiletto|survival|talon|ursus|
-        |glove(s|z)?|blood[\s-]?hound|broken[\s-]?fang|driver|hand[\s-]?wraps?|hydra|moto|specialist|sport|
+        |(for[\s-]?)?kni(fe|ve)(s|z)?|bayonet|bowie|bfk|butterfly|flip|gut|huntsman|kara(mbit)?|kukri|m9|nomad|paracord|(shadow[\s-]?)?daggers?|skeleton|stiletto|survival|talon|ursus|
+        |(for[\s-]?)?glove(s|z)?|blood[\s-]?hound|broken[\s-]?fang|driver|hand[\s-]?wraps?|hydra|moto|specialist|sport|
         |ak(?:[-\s]?47)?|aug|awp|famas|galil|g3sg1|m4|m4a1[-\s]?s|m4a4|a4|scar[-\s]?20|ssg|
         |bizon|mac[-\s]?10|mp7|mp9|ump|mag[-\s]?7|nova|negev|
-        |cz75|deagle|desert eagle|dgl|five[-\s]?seven|glock|p2000|p250|tec[-\s]?9|usp[-\s]?s|
+        |cz75|deagle|desert eagle|dgl|five[-\s]?seven|glock|p2000|p250|tec[-\s]?9|usp[-\s]?s|agents?|
       )\b`, 'gi');
 
     const regexFinishes = new RegExp(String.raw`\b(
-        |amber[\s-]?fade|amphibious|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
+        |(play[\s-]?)?skins?|amber[\s-]?fade|amphibious|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
         |(?:(black|wild)[\s-]?)?lotus|black[\s-]?(pearl|tie)|blood[\s-]?(pressure|sport)?|blue[\s-]?(gem|steel|titanium)|boreal[\s-]?forest|bright[\s-]?water|
         |bronze(?:[\s-]?morph|d)|buckshot|capillary|cartel|case[\s-]?hard(?:ened|end)|charred|chrome[\s-]?cannon|chromatic[\s-]?abberation|caution|
         |cobalt(?:[\s-]?skulls)?|commander|conspiracy|constrictor|convoy|cool[\s-]?mint|cmyk|crakow|crimson(?:[\s-]?(kimono|web)?)?|damascus|ddpat|
-        |(desert|scarlet)[\s-]?shamagh|diamond(back)?|doppler|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|empress|fade|field[\s-]?agent|
+        |(desert|scarlet)[\s-]?shamagh|diamond(back)?|(gamma[\s-]?)?dopplers?|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|empress|fade|field[\s-]?agent|
         |finish[\s-]?line|fever[\s-]?dream|fennec[\s-]?fox|fire[\s-]?serpent|forest|foundation|freehand|fuel[\s-]?injector|giraffe|gold[\s-]?arabesque|
         |golden(?:[\s-]?(coil|koi))?|green[\s-]?energy|guerrilla|gungir|heat[\s-]?treated|hedge(?:[\s-]?maze)?|hellfire|howl|hot[\s-]?rod|hyper[\s-]?beast|
         |ice[\s-]?coaled|imperial(?:[\s-]?plaid)?|inheritance|icarus[\s-]?fell|jade|(?:king[\s-]?)?snake(?:bite)?|leather|
-        |(?:(lightning|tiger|serpent)[\s-]?)?strike|long(?:[\s-]?)dog|lore|lunar[\s-]?weave|marble(?:[\s-]?fade)?|mecha[\s-]?industries|mogul|
+        |(?:lightning|tiger|serpent)[\s-]?strike|long(?:[\s-]?)dog|lore|lunar[\s-]?weave|marble(?:[\s-]?fade)?|mecha[\s-]?industries|mogul|
         |modern[\s-]?hunter|moss[\s-]?quartz|mangrove|mulberry|needle(?:[\s-]?point)?|neon[\s-]?(revolution|rider)?|night(?:[\s-]?(mare|stripe|wish))?|nocts|
         |neo[\s-]?noir|ocean[\s-]?drive|omega|overprint|overtake|(?:p\s*([1-4])|phase\s*([1-4]))|pandora(?:'s?[\s-]?box|[\s-]?)?|phosphor|polygon|poseidon|pow|print[\s-]?stream|
         |(?:queen[\s-]?)?jaguar|radiation[\s-]?hazard|rattler|red[\s-]?line|rub(y|ies)|rust[\s-]?coat|sapphires?|crim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|
-        |(?:snow[\s-])?leopard|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|starcade|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|temukau|
+        |(?:snow[\s-])?leopards?|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|starcade|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|temukau|
         |tilted|transport|turtle|ultraviolet|unhinged|vaporwave|vice|vulcan|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|ibuypower|
       )\b`, 'gi');
 
@@ -106,13 +107,15 @@
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
-        |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|animation|aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
-        |back|badges?|bans?|because|(been|has) limited|best|black screen|(bring|brought) back|broken(?![\s-]?fang)|bugs?|can I|can you|cannot|chang(e|es|ing)|clans?|crash(ed|es)?|created|crosshairs?|deleted?|disappear(ed|ing|s)?|do (I|you)|drops?|
-        |duo|trio|quad|error|extend(?:ed|s|ion|ions)?|fix(ed|es)?|for \d+ days|fps|friends?|game store|glitch(ed|es)?|hard[\s-]?stuck|help|hid(e|ing)|histor(y|ies)hold|how (can|do)?|(I )?opened|idea|is (it|there)|lags?|let (me|us)|(?:re)?load(?:ing)?|
-        |made|matchmaking|mm|miss(ed|es|ing)?|name|no trad(e|es|ing)|not available|not work(ing)?|opinions?|options?|
-        |people|permission|phones?|players?|possibl(e|y)|practice|premiere?|prices?|problems?|questions?|recruiting|remove(d|s)?|reset(s|ted|ting)?|revamps?|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|
-        |should|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|rant(ing)?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|stop|store page|strats?|tactics?|thoughts?|to play\s+.+?(?:\s+with)?|training|unauthorized|unbans?|updates?|unexpected|us(e|es|ers|ing)|valve|wait(ing)? time|what|when|where|which|who|why|
-        |wingman|work(ing)?|would you|
+        |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|animation|aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|doesn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
+        |authentic(at(ed|es|ing|ions?|ors?))?|back|badges?|ban(ned|ning|s)?|because|(been|has) limited|best|black screen|(bring|brought) back|broken(?![\s-]?fang)|bugs?|builds?|can I|can you|cannot|casuals?|chang(e|es|ing)|clans?|clients?|confirm(ed|ing|s)?|crash(ed|es)?|created|crosshairs?|deleted?|desktop|disappear(ed|ing|s)?|discussions?|dlcs?|do(es)? (I|you)?|drop(ping|s)?|
+        |duo|trio|quad|error|extend(?:ed|s|ion|ions)?|fail(ing|s)?|fix(ed|es)?|for \d+ days|forums?|fps|friends?|gam(es|ing)|game store|glitch(ed|es|ing)?|groups?|hard[\s-]?stuck|help|hid(e|ing)|histor(y|ies)|hold(ings?|s)?|hop(e|ing)|how (can|do)?|(I )?opened|icons?|idea|install(ed|ing|s)?|is (it|there)|issues?|lags?|let (me|us)|(?:re)?load(?:ing)?|lost|
+        |made|match(es|ing)?|matchmaking|mm|menus?|miss(ed|es|ing)?|multiplayer|name|network(ing|s)?|no trad(e|es|ing)|not (available|work(ing)?)?|opinions?|option(al|s)?|or not|
+        |patch(es|ing)?|people|permission|phones?|players?|possibl(e|y)|practice|premiere?|prices?|privacy|problems?|profiles?|questions?|receiv(e|ed|ing)|recruiting|remove(d|s)?|reset(s|ted|ting)?|resolv(e|es|ing)|revamps?|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|
+        |should|some(body|how|one|what)|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|rant(ing)?|restrict(ed|ing|ions?|s)?|rework(ed|ing|s)?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|
+        |servers?|sold|stop|store page|strats?|stuck|tactics?|thoughts?|to play\s+.+?(?:\s+with)?|training|tutorials?|unauthorized|unbans?|uninstall(ed|ing|s)?|updates?|unexpected|us(e|es|ers|ing)|valve|version(ing|s)?|visual(ly|s)?|wait(ing)? time|warnings?|we|
+        |what|when|where|which|who|why|
+        |wingman|wish(ed|s)?|wishlist(ed|ing|s)?|work(ing)?|worst|would you|\?|
       )\b`, 'gi');
 
 
@@ -248,7 +251,7 @@
         }
     `;
 
-    const SCRIPT_VERSION = '0.4.20';
+    const SCRIPT_VERSION = '0.4.21';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -276,6 +279,22 @@
     } else {
         regexFiltersComments = [...regexLanguage, ...regexSpam];
     }
+
+    const regexTradeTests = {
+        negatives: regexTradeNegatives,
+        intent: regexTradeIntent,
+        weapons: regexWeapons,
+        finishes: regexFinishes,
+        wear: regexWear,
+        float: regexFloat,
+        stattrak: regexStatTrak
+    };
+
+    const fuzzyRegexTermsByKey = Object.fromEntries(
+        Object.entries(regexTradeTests)
+        .filter(([key]) => key !== 'float' && key !== 'negatives')
+        .map(([key, regex]) => [key, extractTermsFromRegex(regex)])
+    );
 
     const buttonManager = createButtonStateManager();
 
@@ -311,50 +330,185 @@
             .trim()
     }
 
-    function getTradeConfidenceScore(normalized) {
-        const regexTradeTests = {
-            negatives: regexTradeNegatives,
-            intent: regexTradeIntent,
-            weapons: regexWeapons,
-            finishes: regexFinishes,
-            wear: regexWear,
-            float: regexFloat,
-            stattrak: regexStatTrak
-        };
+    function damerauLevenshtein(a, b) {
+        const da = [];
+        const m = a.length;
+        const n = b.length;
 
+        for (let i = 0; i <= m; i++) {
+            da[i] = [i];
+        }
+
+        for (let j = 0; j <= n; j++) {
+            da[0][j] = j;
+        }
+
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                let cost = a[i - 1] === b[j - 1] ? 0 : 1;
+
+                da[i][j] = Math.min(
+                    da[i - 1][j] + 1,           // Deletion
+                    da[i][j - 1] + 1,           // Insertion
+                    da[i - 1][j - 1] + cost     // Substitution
+                );
+
+                if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+                    da[i][j] = Math.min(da[i][j], da[i - 2][j - 2] + cost);
+                }
+            }
+        }
+
+        return da[m][n];
+    }
+
+    function extractTermsFromRegex(regex) {
+        const source = regex.source;
+        const regexTerms = new Set();
+
+        const groupMatches = source.match(/\(([^()]+)\)/g) || [];
+        for (const group of groupMatches) {
+            const terms = group
+            .slice(1, -1)
+            .split('|')
+            .map(s => s.replace(/\\s/g, ' ').replace(/[-\s]?\?/g, ' ').replace(/[-\s]?/g, ' ').trim())
+            .map(s => s.replace(/\s+/g, ' '));
+
+            for (const term of terms) {
+                if (term.length >= 3) {
+                    regexTerms.add(term);
+                }
+            }
+        }
+
+        const baseWords = source.match(/[a-zA-Z0-9@\$]+/g) || [];
+        for (let word of baseWords) {
+            if (word.length >= 3 && !/^\d+$/.test(word)) {
+                regexTerms.add(word);
+            }
+        }
+
+        return [...regexTerms].map(text => ({
+            text,
+            isSingleToken: !text.includes(' ')
+        }));
+    }
+
+    function isFuzzyMatch(word, regexTerm) {
+        if (word === regexTerm) return false;
+
+        const distance = damerauLevenshtein(word, regexTerm);
+        let maxAllowed = 0
+
+        if (regexTerm.length > 6) {
+            maxAllowed = 2;
+        } else if (regexTerm.length > 4) {
+            maxAllowed = 1;
+        }
+
+        return distance <= maxAllowed;
+    }
+
+    function getTradeConfidenceScore(normalized) {
         let score = 0;
         const breakdown = {};
         const matchedByKey = {};
+        const fuzzyMatchByKey = {};
+
+        const allExactMatches = new Set();
+        const tokens = normalized.split(/\s+/);
 
         for (const [key, regex] of Object.entries(regexTradeTests)) {
-            const matches = [...normalized.matchAll(regex)].map(m => m[0]);
-            const count = matches.length;
+
+            let matches = [...normalized.matchAll(regex)].map(m => m[0]);
+            matchedByKey[key] = matches;
+            matches.forEach(m => allExactMatches.add(m));
+
+            let count = matches.length;
+
+            if (key === 'float') {
+                matches = matches.filter((match) => {
+                    const index = normalized.indexOf(match);
+                    const before = normalized.slice(Math.max(0, index - 3), index);
+                    const after = normalized.slice(index + match.length, index + match.length + 3);
+                    return !/[\d]\.[\d]/.test(before + match + after);
+                });
+                count = matches.length;
+                matchedByKey[key] = matches;
+            }
+
+            let fuzzyCount = 0;
+            const fuzzyMatches = [];
+            const usedFuzzyTokens = new Set();
+            const allowFuzzy = key === 'intent' ? count === 0 : count === 0 && fuzzyRegexTermsByKey[key];
+
+            if (allowFuzzy && fuzzyRegexTermsByKey[key]) {
+                for (const { text: keyword } of fuzzyRegexTermsByKey[key]) {
+                    const wordWindowSize = keyword.split(/\s+/).length;
+
+                    if (keyword.length <= 3) continue;
+
+                    for (let i = 0; i <= tokens.length - wordWindowSize; i++) {
+                        const phrase = tokens.slice(i, i + wordWindowSize).join(' ');
+                        if (
+                            isFuzzyMatch(phrase, keyword) &&
+                            !matches.includes(phrase) &&
+                            !allExactMatches.has(phrase) &&
+                            !usedFuzzyTokens.has(phrase)
+                        ) {
+                            fuzzyMatches.push(phrase);
+                            usedFuzzyTokens.add(phrase);
+                        }
+                    }
+                }
+
+                fuzzyCount = key === 'intent'
+                    ? Math.min(1, fuzzyMatches.length)
+                : fuzzyMatches.length;
+            }
+
+            if (key === 'intent') {
+                count = Math.min(1, count);
+                if (count === 1) fuzzyCount = 0;
+            }
+
             const weight = patternWeights[key] || 0;
-            const groupScore = count * weight;
+            let groupScore;
+
+            if (key === 'negatives') {
+                groupScore = 0;
+                for (let i = 0; i < count + fuzzyCount; i++) {
+                    groupScore -= Math.max(0, 3 - i); // -3, -2, -1 then 0
+                }
+            } else {
+                groupScore = (count + fuzzyCount * 0.5) * weight;
+            }
 
             score += groupScore;
-            breakdown[key] = { count, groupScore };
-            matchedByKey[key] = matches;
+            breakdown[key] = { count, fuzzyCount, groupScore };
+            fuzzyMatchByKey[key] = fuzzyMatches;
         }
 
-        return { score, breakdown, matchedByKey };
+        return { score, breakdown, matchedByKey, fuzzyMatchByKey };
     }
 
     function matchesCriteria(text, keywordList, regexList) {
-        for (let keyword of keywordList) {
-            if (text.toLowerCase().includes(keyword.toLowerCase())) {
-                return true;
-            }
-        }
+        const keywordMatches = keywordList.filter(keyword =>
+                                                  text.toLowerCase().includes(keyword.toLowerCase())
+                                                 );
 
-        for (let entry of regexList) {
+        const regexMatches = regexList
+        .map(entry => {
             const regex = Array.isArray(entry) ? entry[1] : entry;
-            if (regex.test(text)) {
-                return true;
-            }
-        }
+            return regex instanceof RegExp && regex.test(text) ? regex.toString() : null;
+        })
+        .filter(Boolean);
 
-        return false;
+        return {
+            isMatch: keywordMatches.length > 0 || regexMatches.length > 0,
+            keywordMatches,
+            regexMatches,
+        };
     }
 
 
@@ -363,20 +517,13 @@
         const title = topic.querySelector('.forum_topic_name.op_hidden');
         if (!title) return false;
 
-        return !!title.querySelector('.forum_topic_label');
-    }
+        const label = title.querySelector('.forum_topic_label');
+        if (!label) return false;
 
-    function isFilteredTopic(topic) {
-        const topicName = topic.querySelector('.forum_topic_name');
-        if (!topicName) return false;
+        const allowedLabels = ['pinned', 'announcement', 'sticky'];
+        const labelText = label.textContent.trim().toLowerCase();
 
-        const text = topicName.textContent.trim();
-        const tradeResult = isTradeRelated(text);
-
-        const isTradeMatch = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
-        const isRegexMatch = matchesCriteria(text, keywords, regexFiltersTopics);
-
-        return isRegexMatch || isTradeMatch;
+        return !allowedLabels.some(allowed => labelText.includes(allowed));
     }
 
     function isBlockedComment(comment) {
@@ -384,6 +531,8 @@
     }
 
     function isFilteredComment(comment) {
+        if (isBlockedComment(comment)) return false;
+
         const commentText = comment.querySelector('.commentthread_comment_text');
         if (!commentText) return false;
 
@@ -394,7 +543,7 @@
         return matchesCriteria(cleanedText, [], regexFiltersComments);
     }
 
-    function isTradeRelated(content, topic = null) {
+    function isTradeRelated(content, topic = null, precomputedRegexMatch = false, keywordMatches = []) {
         if (tradeCheckCache.has(content)) {
             return tradeCheckCache.get(content);
         }
@@ -406,17 +555,12 @@
             score,
             breakdown: scoreByKey,
             matchedByKey,
+            fuzzyMatchByKey,
         } = getTradeConfidenceScore(normalized);
 
         const isTrade = score >= 3;
-        let isRegexMatch = false;
 
-        for (const [_, pattern] of [...regexLanguage, ...regexSpam, ...regexTrade]) {
-            if (pattern.test(raw)) {
-                isRegexMatch = true;
-                break;
-            }
-        }
+        const isRegexMatch = precomputedRegexMatch;
 
         const result = devMode
         ? (() => {
@@ -428,7 +572,9 @@
                 score,
                 scoreByKey,
                 matchedByKey,
+                fuzzyMatchByKey,
                 isRegexMatch,
+                keywordMatches,
             };
 
             if (!isBlocked) {
@@ -456,22 +602,30 @@
         topics.forEach(topic => {
             if (topic.closest('.rightSectionTopTitle')) return;
 
-            topic.classList.remove('hidden-blocked-user', 'hidden-filtered', 'hidden-trade-related', 'hidden-trade-related-filtered');
-
-            const topicName = topic.querySelector('.forum_topic_name');
-            const text = topicName?.textContent.trim() ?? '';
+            topic.classList.remove(
+                'hidden-blocked-user',
+                'hidden-filtered',
+                'hidden-trade-related',
+                'hidden-trade-related-filtered'
+            );
 
             if (isBlockedTopic(topic)) {
+                topic.classList.add('hidden-blocked-user');
                 topic.style.display = (showAll || showBlocked) ? '' : 'none';
-                if (showAll || showBlocked) topic.classList.add('hidden-blocked-user');
                 return;
             }
 
+            const topicName = topic.querySelector('.forum_topic_name');
             if (!topicName) return;
 
-            const tradeResult = isTradeRelated(text);
+            const text = topicName.textContent.trim();
+            const matchResult = matchesCriteria(text, keywords, regexFiltersTopics);
+            const tradeResult = isTradeRelated(text, topic, matchResult.isMatch, matchResult.keywordMatches);
             const tradeMatch = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
-            const regexMatch = matchesCriteria(text, keywords, regexFiltersTopics);
+            const regexMatch = matchResult.isMatch;
+
+            topic.dataset.tradeMatch = tradeMatch;
+            topic.dataset.regexMatch = regexMatch;
 
             if (devMode) {
                 if (tradeMatch && regexMatch) {
@@ -487,8 +641,8 @@
                 }
             }
 
-            const isFiltered = isFilteredTopic(topic);
-            topic.style.display = showAll || isFiltered === false ? '' : 'none';
+            const isFiltered = regexMatch || tradeMatch;
+            topic.style.display = showAll || !isFiltered ? '' : 'none';
         });
 
         if (devMode) {
@@ -629,16 +783,17 @@
         return locationInfo;
     }
 
-    function logDevInfo({ raw, normalized, isTrade, isRegexMatch, matchedByKey = {}, score = 0, scoreByKey = {} }) {
+    function logDevInfo({ raw, normalized, isTrade, isRegexMatch, matchedByKey = {}, fuzzyMatchByKey = {}, score = 0, scoreByKey = {}, keywordMatches = [] }) {
         const styleLabel = 'color: #888; font-weight: bold;';
-        const styleG = 'color: rgba(44, 165, 141, 1);';
-        const styleB = 'color: rgba(118, 85, 116, 1);';
-        const styleNormal = 'color: #54a5d4;';
+        const styleRed = 'color: #765574;';
+        const styleGreen = 'color: #2ca58d;';
+        const styleBlue = 'color: #54a5d4;';
 
-        function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0) {
-            const baseStyle = matches.length
-                ? (isNegative ? styleG : styleB)
-                : styleNormal;
+        function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
+            const baseStyle = overrideStyle
+            ?? (matches.length
+                ? (isNegative ? styleBlue : styleGreen)
+                : styleBlue);
 
             const matchText = matches.join(', ');
 
@@ -647,36 +802,42 @@
                 const weightDisplay = isNegative
                     ? `(-${Math.abs(weightSum)})`
                     : `(+${weightSum})`;
-
                 weightText = ` %c${weightDisplay}`;
             }
 
             return {
                 text: `%c${label}: %c${matchText}${weightText}`,
-                styles: [styleLabel, baseStyle, ...(weightText ? [styleLabel] : [])]
+                styles: [styleLabel, baseStyle, ...(weightText ? [baseStyle] : [])]
             };
         }
 
         const lines = [];
 
+        if (keywordMatches.length) {
+            lines.push({
+                text: `%ckeywords: %c${keywordMatches.join(', ')}`,
+                styles: [styleLabel, styleRed],
+            });
+        }
+
         for (const [description, pattern] of regexLanguage) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('language', [`${match[0]} // ${description}`]));
+                lines.push(renderMatchLine('language', [`${match[0]} // ${description}`], false, 0, styleRed));
                 break;
             }
         }
         for (const [description, pattern] of regexSpam) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('spam', [`${match[0]} // ${description}`]));
+                lines.push(renderMatchLine('spam', [`${match[0]} // ${description}`], false, 0, styleRed));
                 break;
             }
         }
         for (const [description, pattern] of regexTrade) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('trade', [`${match[0]} // ${description}`]));
+                lines.push(renderMatchLine('trade', [`${match[0]} // ${description}`], false, 0, styleRed));
                 break;
             }
         }
@@ -691,26 +852,61 @@
             }
         }
 
-        const qualitative = score < 0 ? 'very unlikely'
-            : score < 3 ? 'unlikely'
-            : score < 6 ? 'likely'
-            : 'very likely';
+        if (fuzzyMatchByKey && typeof fuzzyMatchByKey === 'object') {
+            for (const key of Object.keys(fuzzyMatchByKey)) {
+                const fuzzyMatches = fuzzyMatchByKey[key] || [];
+                const weight = scoreByKey[key]?.groupScore ?? 0;
+                if (fuzzyMatches.length) {
+                    lines.push(renderMatchLine(`${key} (fuzzy)`, fuzzyMatches, key === 'negatives', weight));
+                }
+            }
+        }
 
-        const scoreColor = score >= 3 ? styleB : styleG;
-        const qualitativeColor = score >= 3 ? styleB : styleG;
-
-        lines.push({
-            text: `%cTrade-related score: %c${score} %c- %c${qualitative}`,
-            styles: [styleLabel, scoreColor, styleLabel, qualitativeColor]
+        const hasTradeMatches = tradeKeys.some(key => {
+            const count = (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0);
+            return count > 0;
         });
 
-        console.groupCollapsed(`%c"${raw}"`, styleNormal);
-        console.log(`%cNormalized:%c "${normalized}"`, styleLabel, styleNormal);
+        if (hasTradeMatches) {
+            const qualitative = score < 0 ? 'very unlikely'
+                : score < 3 ? 'unlikely'
+                : score < 6 ? 'likely'
+                : 'very likely';
+
+            const scoreColor = score >= 3 ? styleGreen : styleBlue;
+            const qualitativeColor = score >= 3 ? styleGreen : styleBlue;
+
+            lines.push({
+                text: `%cTrade-related score: %c${score} %c- %c${qualitative}`,
+                styles: [styleLabel, scoreColor, styleLabel, qualitativeColor]
+            });
+        }
+
+        let label = `"${raw}"`;
+        let groupStyle = styleLabel;
+
+        const keywordPart = keywordMatches?.length ? 'Keyword' : '';
+        const regexPart = isRegexMatch && !keywordPart ? 'Regex' : '';
+        const filterLabel = [keywordPart, regexPart].filter(Boolean).join('+');
+
+        if (isRegexMatch && isTrade) {
+            label += ` [${filterLabel}+Trade]`;
+            groupStyle = 'color: #d17842; font-weight: bold;';
+        } else if (isRegexMatch) {
+            label += ` [${filterLabel}]`;
+            groupStyle = styleRed;
+        } else if (isTrade) {
+            label += ' [Trade]';
+            groupStyle = styleGreen;
+        }
+
+        console.groupCollapsed(`%c${label}`, groupStyle);
+        console.log(`%cNormalized:%c "${normalized}"`, styleLabel, styleBlue);
 
         console.log(
-            `%cisTrade:%c ${isTrade}   %cisRegex:%c ${isRegexMatch}`,
-            styleLabel, isTrade ? styleB : styleG,
-            styleLabel, isRegexMatch ? styleB : styleG
+            `%cisRegex:%c ${isRegexMatch}   %cisTrade:%c ${isTrade}`,
+            styleLabel, isRegexMatch ? styleRed : styleLabel,
+            styleLabel, isTrade ? styleGreen : styleLabel
         );
 
         for (const line of lines) {
@@ -747,8 +943,15 @@
             topics.forEach(topic => {
                 if (topic.closest('.rightSectionTopTitle')) return;
 
-                if (isBlockedTopic(topic)) blockedCount++;
-                if (isFilteredTopic(topic)) filteredCount++;
+                if (topic.classList.contains('hidden-blocked-user')) blockedCount++;
+
+                if (
+                    topic.classList.contains('hidden-filtered') ||
+                    topic.classList.contains('hidden-trade-related') ||
+                    topic.classList.contains('hidden-trade-related-filtered')
+                ) {
+                    filteredCount++;
+                }
             });
         }
 
@@ -756,8 +959,15 @@
             const comments = document.querySelectorAll('.commentthread_comment');
 
             comments.forEach(comment => {
-                if (isBlockedComment(comment)) blockedCount++;
-                if (isFilteredComment(comment)) filteredCount++;
+                if (comment.classList.contains('hidden-blocked-user')) blockedCount++;
+
+                if (
+                    comment.classList.contains('hidden-filtered') ||
+                    comment.classList.contains('hidden-trade-related') ||
+                    comment.classList.contains('hidden-trade-related-filtered')
+                ) {
+                    filteredCount++;
+                }
             });
         }
 
