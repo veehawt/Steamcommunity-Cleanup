@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.21
+// @version      0.4.22
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -251,7 +251,7 @@
         }
     `;
 
-    const SCRIPT_VERSION = '0.4.21';
+    const SCRIPT_VERSION = '0.4.22';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -409,7 +409,7 @@
         return distance <= maxAllowed;
     }
 
-    function getTradeConfidenceScore(normalized) {
+    function getTradeConfidenceScore(normalized, skipFuzzy = false) {
         let score = 0;
         const breakdown = {};
         const matchedByKey = {};
@@ -440,7 +440,7 @@
             let fuzzyCount = 0;
             const fuzzyMatches = [];
             const usedFuzzyTokens = new Set();
-            const allowFuzzy = key === 'intent' ? count === 0 : count === 0 && fuzzyRegexTermsByKey[key];
+            const allowFuzzy = !skipFuzzy && (key === 'intent' ? count === 0 : count === 0 && fuzzyRegexTermsByKey[key]);
 
             if (allowFuzzy && fuzzyRegexTermsByKey[key]) {
                 for (const { text: keyword } of fuzzyRegexTermsByKey[key]) {
@@ -492,6 +492,55 @@
         return { score, breakdown, matchedByKey, fuzzyMatchByKey };
     }
 
+    function applyFuzzyEnhancement(showAll) {
+        const topics = document.querySelectorAll('.forum_topic');
+
+        topics.forEach(topic => {
+            if (topic.closest('.rightSectionTopTitle')) return;
+            if (topic.classList.contains('hidden-blocked-user')) return;
+
+            const topicName = topic.querySelector('.forum_topic_name');
+            if (!topicName) return;
+
+            const text = topicName.textContent.trim();
+            const matchResult = matchesCriteria(text, keywords, regexFiltersTopics);
+            const tradeResult = isTradeRelated(text, topic, matchResult.isMatch, matchResult.keywordMatches, false);
+            const tradeMatch = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
+            const regexMatch = matchResult.isMatch;
+
+            topic.dataset.tradeMatch = tradeMatch;
+            topic.dataset.regexMatch = regexMatch;
+
+            applyTopicClasses(topic, tradeMatch, regexMatch, showAll);
+        });
+
+        initCounts();
+    }
+    function applyTopicClasses(topic, tradeMatch, regexMatch, showAll) {
+        topic.classList.remove(
+            'hidden-filtered',
+            'hidden-trade-related',
+            'hidden-trade-related-filtered'
+        );
+
+        if (devMode) {
+            if (tradeMatch && regexMatch) {
+                topic.classList.add('hidden-trade-related-filtered');
+            } else if (tradeMatch) {
+                topic.classList.add('hidden-trade-related');
+            } else if (regexMatch) {
+                topic.classList.add('hidden-filtered');
+            }
+        } else {
+            if (tradeMatch || regexMatch) {
+                topic.classList.add('hidden-filtered');
+            }
+        }
+
+        const isFiltered = regexMatch || tradeMatch;
+        topic.style.display = showAll || !isFiltered ? '' : 'none';
+    }
+
     function matchesCriteria(text, keywordList, regexList) {
         const keywordMatches = keywordList.filter(keyword =>
                                                   text.toLowerCase().includes(keyword.toLowerCase())
@@ -540,12 +589,14 @@
         textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
         const cleanedText = textClone.textContent.trim();
 
-        return matchesCriteria(cleanedText, [], regexFiltersComments);
+        const matchResult = matchesCriteria(cleanedText, [], regexFiltersComments);
+        return matchResult.isMatch;
     }
 
-    function isTradeRelated(content, topic = null, precomputedRegexMatch = false, keywordMatches = []) {
-        if (tradeCheckCache.has(content)) {
-            return tradeCheckCache.get(content);
+    function isTradeRelated(content, topic = null, precomputedRegexMatch = false, keywordMatches = [], skipFuzzy = false) {
+        const cacheKey = `${content}::${skipFuzzy ? 'nofuzzy' : 'full'}`;
+        if (tradeCheckCache.has(cacheKey)) {
+            return tradeCheckCache.get(cacheKey);
         }
 
         const raw = content.toLowerCase();
@@ -556,10 +607,9 @@
             breakdown: scoreByKey,
             matchedByKey,
             fuzzyMatchByKey,
-        } = getTradeConfidenceScore(normalized);
+        } = getTradeConfidenceScore(normalized, skipFuzzy);
 
         const isTrade = score >= 3;
-
         const isRegexMatch = precomputedRegexMatch;
 
         const result = devMode
@@ -576,16 +626,14 @@
                 isRegexMatch,
                 keywordMatches,
             };
-
             if (!isBlocked) {
                 logDevInfo(debugInfo);
             }
-
             return debugInfo;
         })()
         : isTrade;
 
-        tradeCheckCache.set(content, result);
+        tradeCheckCache.set(cacheKey, result);
         return result;
     }
 
@@ -620,36 +668,22 @@
 
             const text = topicName.textContent.trim();
             const matchResult = matchesCriteria(text, keywords, regexFiltersTopics);
-            const tradeResult = isTradeRelated(text, topic, matchResult.isMatch, matchResult.keywordMatches);
+            const tradeResult = isTradeRelated(text, topic, matchResult.isMatch, matchResult.keywordMatches, true);
             const tradeMatch = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
             const regexMatch = matchResult.isMatch;
 
             topic.dataset.tradeMatch = tradeMatch;
             topic.dataset.regexMatch = regexMatch;
 
-            if (devMode) {
-                if (tradeMatch && regexMatch) {
-                    topic.classList.add('hidden-trade-related-filtered');
-                } else if (tradeMatch) {
-                    topic.classList.add('hidden-trade-related');
-                } else if (regexMatch) {
-                    topic.classList.add('hidden-filtered');
-                }
-            } else {
-                if (tradeMatch || regexMatch) {
-                    topic.classList.add('hidden-filtered');
-                }
-            }
-
-            const isFiltered = regexMatch || tradeMatch;
-            topic.style.display = showAll || !isFiltered ? '' : 'none';
+            applyTopicClasses(topic, tradeMatch, regexMatch, showAll);
         });
 
         if (devMode) {
             console.groupEnd();
         }
-
         initCounts();
+
+        setTimeout(() => applyFuzzyEnhancement(showAll, showBlocked), 50);
     }
 
     function filterComments(showAll = devMode, showBlocked = false) {
@@ -671,14 +705,14 @@
             comment.classList.remove('hidden-blocked-user-comment', 'hidden-filtered-comment');
 
             if (isBlockedComment(comment)) {
+                comment.classList.add('hidden-blocked-user-comment');
                 comment.style.display = (showAll || showBlocked) ? '' : 'none';
-                if (showAll || showBlocked) comment.classList.add('hidden-blocked-user-comment');
                 return;
             }
 
             if (isFilteredComment(comment)) {
+                comment.classList.add('hidden-filtered-comment');
                 comment.style.display = (showAll) ? '' : 'none';
-                if (showAll) comment.classList.add('hidden-filtered-comment');
                 return;
             }
 
@@ -943,7 +977,9 @@
             topics.forEach(topic => {
                 if (topic.closest('.rightSectionTopTitle')) return;
 
-                if (topic.classList.contains('hidden-blocked-user')) blockedCount++;
+                if (topic.classList.contains('hidden-blocked-user')) {
+                    blockedCount++;
+                }
 
                 if (
                     topic.classList.contains('hidden-filtered') ||
@@ -959,13 +995,11 @@
             const comments = document.querySelectorAll('.commentthread_comment');
 
             comments.forEach(comment => {
-                if (comment.classList.contains('hidden-blocked-user')) blockedCount++;
+                if (comment.classList.contains('hidden-blocked-user-comment')) {
+                    blockedCount++;
+                }
 
-                if (
-                    comment.classList.contains('hidden-filtered') ||
-                    comment.classList.contains('hidden-trade-related') ||
-                    comment.classList.contains('hidden-trade-related-filtered')
-                ) {
+                if (comment.classList.contains('hidden-filtered-comment')) {
                     filteredCount++;
                 }
             });
