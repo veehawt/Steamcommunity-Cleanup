@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.27
+// @version      0.4.28
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -18,6 +18,8 @@
 
 (function() {
     'use strict';
+
+    const hideBlockedCommentQuote = false;
 
     // Keywords in topic titles to hide
     const keywords = [
@@ -65,7 +67,7 @@
         ["variations of 'offer' / 'offering'",       /\bo+f{2,}e+r{1,}i?n?g?s?\b/i],
         ["H/W (have/want) variants with brackets",   /\b[\[\(\{\<\-\*\_]?([hw])[\]\)\}\>\-\*\_]?(\b|(?=\W))/i],
         ["open inventory/trade",                     /\bopen (?:inventory|inv|trade)\b/i],
-        ["currency-prefixed or -suffixed numbers",   /\b\d{1,3}(?:[.,]\d{1,3})?k[\s]?[€$£¥]?|[€$£¥][\s]?\d{1,3}(?:[.,]\d{1,3})?k\b|\b\d{1,6}[\s]?[€$£¥]|[€$£¥][\s]?\d{1,6}\b/i],
+        ["currency pre-/suffix: $10k, €1.2k, 2000$", /\b(?:\d{1,3}(?:[.,]\d{1,3})?k[\s]?[€$£¥]|[€$£¥][\s]?\d{1,3}(?:[.,]\d{1,3})?k|\d{1,6}[\s]?[€$£¥]|[€$£¥][\s]?\d{1,6})\b/i],
     ];
 
 
@@ -172,6 +174,9 @@
         .blocked-user-comment {
             background-color: #2b2230 !important;
         }
+        .blocked-user-comment-quote {
+            background-color: rgba(20, 29, 41, 0.8) !important;
+        }
         .blocked-user-OP {
             background: linear-gradient(to bottom right, #3a2c3f, #1a141c) !important;
             border: 1px solid #1e161f !important;
@@ -270,9 +275,12 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.27';
+    const SCRIPT_VERSION = '0.4.28';
     const devMode = false;
     const tradeCheckCache = new Map();
+
+    const loggedLocations = new Set();
+    let devLogGroupOpen = false;
 
     const isTradingForum = window.location.href.includes('/tradingforum/');
     const isTopicsContainer = document.querySelector('.forum_topics_container');
@@ -645,6 +653,28 @@
         return comment.classList.contains('commentthread_deleted_expanded');
     }
 
+    function isBlockedCommentQuote(comment) {
+        if (!isDiscussion) return false;
+
+        const commentText = comment.querySelector('.commentthread_comment_text');
+        if (!commentText) return false;
+
+        const blockedCommentIds = new Set(
+            Array.from(document.querySelectorAll('.commentthread_deleted_expanded[id^="comment_"]'))
+            .map(el => el.id.replace('comment_', ''))
+        );
+
+        const quoteLinks = commentText.querySelectorAll('a[href^="#c"]');
+        for (const link of quoteLinks) {
+            const quotedId = link.getAttribute('href').substring(2);
+            if (blockedCommentIds.has(quotedId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function isFilteredComment(comment) {
         if (isBlockedComment(comment)) return false;
 
@@ -701,13 +731,15 @@
     }
 
     function filterTopics(showAll = devMode, showBlocked = false) {
-        if (devMode) {
-            const locationInfo = getForumLocationInfo();
+        const locationInfo = getForumLocationInfo();
+
+        if (devMode && !loggedLocations.has(locationInfo)) {
             console.groupCollapsed(`%cDev Log @ [${locationInfo}]`, 'color: gray;');
+            devLogGroupOpen = true;
+            loggedLocations.add(locationInfo);
         }
 
         const topics = document.querySelectorAll('.forum_topic');
-
         topics.forEach(topic => {
             if (topic.closest('.rightSectionTopTitle')) return;
 
@@ -744,7 +776,14 @@
 
         initCounts();
 
-        setTimeout(() => applyFuzzyEnhancement(showAll, showBlocked), 50);
+        setTimeout(() => {
+            applyFuzzyEnhancement(showAll, showBlocked);
+
+            if (devLogGroupOpen) {
+                console.groupEnd();
+                devLogGroupOpen = false;
+            }
+        }, 50);
     }
 
     function filterComments(showAll = devMode, showBlocked = false) {
@@ -763,11 +802,21 @@
                 return;
             }
 
-            comment.classList.remove('blocked-user-comment', 'filtered-regex-comment');
+            comment.classList.remove(
+                'blocked-user-comment',
+                'filtered-regex-comment',
+                'blocked-user-comment-quote'
+            );
 
             if (isBlockedComment(comment)) {
                 comment.classList.add('blocked-user-comment');
                 comment.style.display = (showAll || showBlocked) ? '' : 'none';
+                return;
+            }
+
+            if (hideBlockedCommentQuote && isBlockedCommentQuote(comment)) {
+                comment.classList.add('blocked-user-comment-quote');
+                comment.style.display = (showAll || showBlocked || !hideBlockedCommentQuote) ? '' : 'none';
                 return;
             }
 
@@ -1132,6 +1181,7 @@
 
     function countHiddenContent() {
         let blockedCount = 0;
+        let blockedQuoteCount = 0;
         let filteredCount = 0;
 
         if (isGeneralForum) {
@@ -1162,28 +1212,33 @@
                     blockedCount++;
                 }
 
+                if (comment.classList.contains('blocked-user-comment-quote')) {
+                    blockedQuoteCount++;
+                }
+
                 if (comment.classList.contains('filtered-regex-comment')) {
                     filteredCount++;
                 }
             });
         }
 
-        return { blockedCount, filteredCount };
+        return { blockedCount, blockedQuoteCount, filteredCount };
     }
 
-    function createDisplayText(blockedCount, filteredCount) {
+    function createDisplayText(blockedCount, blockedQuoteCount, filteredCount) {
         const parts = [];
         if (blockedCount > 0) parts.push(`${blockedCount} from blocked users`);
+        if (hideBlockedCommentQuote && blockedQuoteCount > 0) parts.push(`${blockedQuoteCount} quoting blocked users`);
         if (filteredCount > 0) parts.push(`${filteredCount} filtered`);
         return parts.join(', ');
     }
 
-    function displayCount(blockedCount, filteredCount) {
+    function displayCount(blockedCount, blockedQuoteCount, filteredCount ) {
         const pagingSummaries = document.querySelectorAll('.forum_paging_summary.ellipsis');
 
         pagingSummaries.forEach(pagingSummary => {
             let countDisplay = pagingSummary.querySelector('#count-display');
-            const rawText = createDisplayText(blockedCount, filteredCount);
+            const rawText = createDisplayText(blockedCount, blockedQuoteCount, filteredCount);
             const displayText = rawText ? ` (${rawText})` : '';
 
             if (countDisplay) {
@@ -1464,8 +1519,8 @@
     }
 
     function initCounts() {
-        const { blockedCount, filteredCount } = countHiddenContent();
-        displayCount(blockedCount, filteredCount);
+        const { blockedCount, blockedQuoteCount, filteredCount } = countHiddenContent();
+        displayCount(blockedCount, blockedQuoteCount, filteredCount);
     }
 
 
