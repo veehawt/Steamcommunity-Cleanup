@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.28
+// @version      0.4.29
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -73,10 +73,9 @@
 
     // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
     const regexTradeIntent = new RegExp(String.raw`\b(
-        |buy(ing)?|capsules?|cases?|check(?: my)? (?:inv+|inventory)|downgrades?|upgrades?|fast trade(s|z)?|fair\s+(trade(s|z)?|deal(s|z)?)|fast response|full loadout|giveaway|give me|have|want|in stock|
-        |invent(ory)?|inv+|kato(wice)?|knife for knife|for trade|loadout|lf\b|looking for(?: trade)?|o+p+e+n+|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|
-        |personal trader|rare|send trade|someone trade me|stickers?|store|swap|t[r4]+[a@]+([i1]+)?[d+]+[e3]+[sr]?|trade(?:[-\s]?up)?|trading|
-        |zero to knife|
+        |buy(ing)?|capsules?|cases?|check(?: my)? (?:inv+|inventory)|downgrades?|upgrades?|fast trade(s|z)?|fair\s+(trade(s|z)?|deal(s|z)?)|fast response|full loadout|giveaway|
+        |give me|have|want|in stock|invent(ory)?|inv+|kato(wice)?|knife for knife|for trade|loadout|lf\b|looking for(?: trade)?|o+p+e+n+|open(?:[\s-]?(for\s?)?(24\/7|trade|inv+))|
+        |personal trader|rare|send trade|someone trade me|stickers?|store|swap|t[r4]+[a@]+([i1]+)?d+[e3]?s?[r]?|trade(?:[-\s]?up)?|trading|zero to knife|
       )\b`, 'gi');
 
     const regexWeapons = new RegExp(String.raw`\b(
@@ -101,7 +100,7 @@
         |neo[\s-]?noir|ocean[\s-]?drive|omega|overprint|overtake|(?:p\s*([1-4])|phase\s*([1-4]))|pandora(?:'s?[\s-]?box|[\s-]?)?|phosphor|polygon|poseidon|pow|print[\s-]?stream|
         |(?:queen[\s-]?)?jaguar|radiation[\s-]?hazard|rattler|red[\s-]?line|rub(y|ies)|rust[\s-]?coat|sapphires?|crim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|
         |(?:snow[\s-])?leopards?|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|starcade|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|temukau|
-        |tilted|transport|turtle|ultraviolet|unhinged|vaporwave|vice|vulcan|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|ibuypower|
+        |tilted|transport|turtle|ultraviolet|unhinged|vanilla|vaporwave|vice|vulcan|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|ibuypower|
       )\b`, 'gi');
 
     const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/gi;
@@ -109,15 +108,19 @@
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
-        |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|animation|aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|doesn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
-        |authentic(at(ed|es|ing|ions?|ors?))?|back|badges?|ban(ned|ning|s)?|because|(been|has) limited|best|black screen|(bring|brought) back|broken(?![\s-]?fang)|bugs?|builds?|can I|can you|cannot|casuals?|chang(e|es|ing)|clans?|clients?|confirm(ed|ing|s)?|crash(ed|es)?|created|crosshairs?|deleted?|desktop|disappear(ed|ing|s)?|discussions?|dlcs?|do(es)? (I|you)?|drop(ping|s)?|
-        |duo|trio|quad|error|extend(?:ed|s|ion|ions)?|fail(ing|s)?|fix(ed|es)?|for \d+ days|forums?|fps|friends?|gam(es|ing)|game store|glitch(ed|es|ing)?|groups?|hard[\s-]?stuck|help|hid(e|ing)|histor(y|ies)|hold(ings?|s)?|hop(e|ing)|how (can|do)?|(I )?opened|icons?|idea|install(ed|ing|s)?|is (it|there)|issues?|lags?|let (me|us)|(?:re)?load(?:ing)?|lost|
-        |made|match(es|ing)?|matchmaking|mm|menus?|miss(ed|es|ing)?|multiplayer|name|network(ing|s)?|no trad(e|es|ing)|not (available|work(ing)?)?|opinions?|option(al|s)?|or not|
-        |patch(es|ing)?|people|permission|phones?|players?|possibl(e|y)|practice|premiere?|prices?|privacy|problems?|profiles?|questions?|receiv(e|ed|ing)|recruiting|remove(d|s)?|reset(s|ted|ting)?|resolv(e|es|ing)|revamps?|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|
-        |should|some(body|how|one|what)|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|rant(ing)?|restrict(ed|ing|ions?|s)?|rework(ed|ing|s)?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|
-        |servers?|sold|stop|store page|strats?|stuck|tactics?|thoughts?|to play\s+.+?(?:\s+with)?|training|tutorials?|unauthorized|unbans?|uninstall(ed|ing|s)?|updates?|unexpected|us(e|es|ers|ing)|valve|version(ing|s)?|visual(ly|s)?|wait(ing)? time|warnings?|we|
-        |what|when|where|which|who|why|
-        |wingman|wish(ed|s)?|wishlist(ed|ing|s)?|work(ing)?|worst|would you|\?|
+        |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|animation|anti[\s-]?cheats?|
+        |aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|doesn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
+        |authentic(at(ed|es|ing|ions?|ors?))?|back|badges?|ban(ned|ning|s)?|because|(been|has) limited|best|black screen|(bring|brought) back|broken(?![\s-]?fang)|bugs?|builds?|
+        |can (I|you)|cannot|casuals?|chang(e|es|ing)|clans?|clients?|confirm(ed|ing|s)?|crash(ed|es)?|created|crosshairs?|deleted?|desktop|disappear(ed|ing|s)?|discussions?|dlcs?|
+        |do(es)? (I|you)?|drop(ping|s)?|duo|trio|quad|error|extend(?:ed|s|ion|ions)?|fail(ing|s)?|fix(ed|es)?|for \d+ days|forums?|fps|friends?|gam(es|ing)|game store|
+        |glitch(ed|es|ing)?|groups?|hard[\s-]?stuck|help|hid(e|ing)|histor(y|ies)|hold(ings?|s)?|hop(e|ing)|how (can|do)?|(I )?opened|icons?|idea|install(ed|ing|s)?|is (it|there)|
+        |issues?|lags?|let (me|us)|(?:re)?load(?:ing)?|lost|made|match(es|ing)?|matchmaking|mm|menus?|miss(ed|es|ing)?|multiplayer|name|network(ing|s)?|no trad(e|es|ing)|
+        |not (available|work(ing)?)?|opinions?|option(al|s)?|or not|patch(es|ing)?|people|permission|phones?|players?|point shop|polic(ing|y|ies)|possibl(e|y)|practice|premiere?|prices?|prime|privacy|
+        |problems?|profiles?|questions?|rat(e(s)?|ing(s)?)|receiv(e|ed|ing)|recruiting|remove(d|s)?|reset(s|ted|ting)?|resolutions?|resolv(e|es|ing)|revamps?|rules|scam(?:s|med)?|
+        |stolen|scrim(?:s|z)?|scrimmages?|should|some(body|how|one|thing|what|where)|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|rant(ing)?|restrict(ed|ing|ions?|s)?|revers(e|al)?|
+        |rework(ed|ing|s)?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|servers?|sold|stop|store page|strats?|stretched|stuck|tactics?|thoughts?|
+        |to play\s+.+?(?:\s+with)?|training|tutorials?|unable|unauthorized|unbans?|uninstall(ed|ing|s)?|updates?|unexpected|us(e|es|ers|ing)|vac|valve|version(ing|s)?|visual(ly|s)?|
+        |wait(ing)? time|warnings?|we|what|when|where|which|who|why|wingman|wish(ed|s)?|wishlist(ed|ing|s)?|work(ing)?|worst|would you|\?|
       )\b`, 'gi');
 
 
@@ -275,7 +278,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.28';
+    const SCRIPT_VERSION = '0.4.29';
     const devMode = false;
     const tradeCheckCache = new Map();
 
