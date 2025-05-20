@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.29
+// @version      0.4.30
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -278,7 +278,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.29';
+    const SCRIPT_VERSION = '0.4.30';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -366,11 +366,12 @@
         const n = b.length;
 
         for (let i = 0; i <= m; i++) {
-            da[i] = [i];
-        }
-
-        for (let j = 0; j <= n; j++) {
-            da[0][j] = j;
+            da[i] = [];
+            for (let j = 0; j <= n; j++) {
+                if (i === 0) da[i][j] = j;
+                else if (j === 0) da[i][j] = i;
+                else da[i][j] = 0;
+            }
         }
 
         for (let i = 1; i <= m; i++) {
@@ -394,69 +395,109 @@
 
     function extractTermsFromRegex(regex) {
         const source = regex.source;
-        const regexTerms = new Set();
+        const terms = new Set();
 
-        const groupMatches = source.match(/\(([^()]+)\)/g) || [];
-        for (const group of groupMatches) {
-            const terms = group
-            .slice(1, -1)
-            .split('|')
-            .map(s => s.replace(/\\s/g, ' ').replace(/[-\s]?\?/g, ' ').replace(/[-\s]?/g, ' ').trim())
-            .map(s => s.replace(/\s+/g, ' '));
+        let cleaned = source
+        .replace(/\\b/g, '')
+        .replace(/\(\?:/g, '(')
+        .replace(/\\s\??/g, ' ')
+        .replace(/[-\s]?\?/g, ' ')
+        .replace(/[^a-zA-Z0-9|() ]+/g, '')
+        .replace(/\s{2,}/g, ' ');
 
-            for (const term of terms) {
-                if (term.length >= 3) {
-                    regexTerms.add(term);
-                }
+        function expandGroup(base, groupContent) {
+            const variants = groupContent.split('|');
+            const results = [];
+            for (const variant of variants) {
+                results.push(base + variant);
+            }
+            return results;
+        }
+
+        const altGroupRegex = /([a-z0-9]+)\(([^()]+)\)\?/gi;
+        cleaned = cleaned.replace(altGroupRegex, (_, base, opts) => {
+            return expandGroup(base, opts).join('|');
+        });
+
+        const flatGroupMatches = cleaned.match(/\(([^()]+)\)/g) || [];
+        for (const group of flatGroupMatches) {
+            const parts = group.slice(1, -1).split('|');
+            for (let term of parts) {
+                term = term.trim().replace(/\s+/g, ' ');
+                if (term.length >= 3) terms.add(term);
             }
         }
 
-        const baseWords = source.match(/[a-zA-Z0-9@\$]+/g) || [];
-        for (let word of baseWords) {
-            if (word.length >= 3 && !/^\d+$/.test(word)) {
-                regexTerms.add(word);
-            }
+        const looseTerms = cleaned
+        .split('|')
+        .map(t => t.trim())
+        .filter(t => t.length >= 3);
+
+        for (const term of looseTerms) {
+            terms.add(term);
         }
 
-        return [...regexTerms].map(text => ({
+        return [...terms].map(text => ({
             text,
             isSingleToken: !text.includes(' ')
         }));
     }
 
-    function isFuzzyMatch(word, regexTerm) {
-        if (word === regexTerm) return false;
-
-        const distance = damerauLevenshtein(word, regexTerm);
-        let maxAllowed = 0
-
-        if (regexTerm.length > 6) {
-            maxAllowed = 2;
-        } else if (regexTerm.length > 4) {
-            maxAllowed = 1;
+    function generateNGrams(tokens, maxSize) {
+        const nGrams = {};
+        for (let size = 1; size <= maxSize; size++) {
+            nGrams[size] = [];
+            for (let i = 0; i <= tokens.length - size; i++) {
+                const phrase = tokens.slice(i, i + size).join(' ');
+                nGrams[size].push(phrase);
+            }
         }
-
-        return distance <= maxAllowed;
+        return nGrams;
     }
 
-    function getFuzzyMatchesForKey(tokens, regexTermList, allExactMatches) {
+    function isFuzzyMatch(word, regexTerm, minWordLength = 5) {
+        if (word === regexTerm) return false;
+        if (word.length < minWordLength || regexTerm.length < minWordLength) return false;
+
+        const minAllowed = 1;
+        const maxAllowed = Math.min(2, Math.floor(regexTerm.length / 5));
+        const allowedDistance = Math.max(minAllowed, maxAllowed);
+
+        const distance = damerauLevenshtein(word, regexTerm);
+
+        return distance <= allowedDistance;
+    }
+
+    function getFuzzyMatchesForKey(tokens, regexTermList, allExactMatches, {
+        globalUsedFuzzyTokens = new Set(),
+        fuzzyStopwords = new Set(),
+        allowlist = null
+    } = {}) {
         const fuzzyMatches = [];
-        const usedFuzzyTokens = new Set();
+        const localUsedFuzzyTokens = new Set();
+
+        const maxWindow = Math.max(...regexTermList.map(t => t.text.split(' ').length));
+        const nGrams = generateNGrams(tokens, maxWindow);
 
         for (const { text: regexTerm } of regexTermList) {
-            const windowSize = regexTerm.split(/\s+/).length;
-            if (regexTerm.length <= 3) continue;
+            if (allowlist && !allowlist.has(regexTerm)) continue;
 
-            for (let i = 0; i <= tokens.length - windowSize; i++) {
-                const phrase = tokens.slice(i, i + windowSize).join(' ');
+            const size = regexTerm.split(' ').length;
+            const candidates = nGrams[size] || [];
+
+            for (const phrase of candidates) {
+                const normalized = phrase.trim().toLowerCase();
 
                 if (
-                    isFuzzyMatch(phrase, regexTerm) &&
-                    !allExactMatches.has(phrase) &&
-                    !usedFuzzyTokens.has(phrase)
+                    isFuzzyMatch(normalized, regexTerm) &&
+                    !allExactMatches.has(normalized) &&
+                    !localUsedFuzzyTokens.has(normalized) &&
+                    !globalUsedFuzzyTokens.has(normalized) &&
+                    !fuzzyStopwords.has(normalized)
                 ) {
-                    fuzzyMatches.push(phrase);
-                    usedFuzzyTokens.add(phrase);
+                    fuzzyMatches.push(normalized);
+                    localUsedFuzzyTokens.add(normalized);
+                    globalUsedFuzzyTokens.add(normalized);
                 }
             }
         }
@@ -519,7 +560,28 @@
         };
     }
 
-    function isTradeRelated(content, topic = null, precomputedRegexMatch = false, keywordMatches = [], skipFuzzy = false) {
+    function analyzeTradeMatch(content, skipFuzzy) {
+        const normalized = normalizeContent(content);
+
+        const {
+            score,
+            breakdown,
+            matchedByKey,
+            fuzzyMatchByKey
+        } = getTradeConfidenceScore(normalized, skipFuzzy);
+
+        return {
+            isTrade: score >= 3,
+            score,
+            confidence: getConfidenceLevel(score),
+            scoreByKey: breakdown,
+            matchedByKey,
+            fuzzyMatchByKey,
+            normalized
+        };
+    }
+
+    function isTradeRelated(content, topic = null, isRegexMatch = false, keywordMatches = [], skipFuzzy = false) {
         if (isTradingForum && !devMode) return false;
 
         const cacheKey = `${content}::${skipFuzzy ? 'nofuzzy' : 'full'}`;
@@ -527,42 +589,24 @@
             return tradeCheckCache.get(cacheKey);
         }
 
-        const raw = content.toLowerCase();
-        const normalized = normalizeContent(content);
+        const result = analyzeTradeMatch(content, skipFuzzy);
 
-        const {
-            score,
-            breakdown,
-            matchedByKey,
-            fuzzyMatchByKey,
-        } = getTradeConfidenceScore(normalized, skipFuzzy);
-
-        const isTrade = score >= 3;
-        const confidence = getConfidenceLevel(score);
-        const isRegexMatch = precomputedRegexMatch;
-
-        let result;
+        let output;
         if (devMode) {
-            result = getDebugResult({
-                raw,
-                normalized,
-                isTrade,
-                score,
-                confidence,
-                scoreByKey: breakdown,
-                matchedByKey,
-                fuzzyMatchByKey,
+            output = getDebugResult({
+                ...result,
+                raw: content.toLowerCase(),
                 isRegexMatch,
                 keywordMatches,
                 topic,
                 skipFuzzy
             });
         } else {
-            result = isTrade;
+            output = result.isTrade;
         }
 
-        tradeCheckCache.set(cacheKey, result);
-        return result;
+        tradeCheckCache.set(cacheKey, output);
+        return output;
     }
 
 
@@ -574,6 +618,14 @@
         const tokens = normalized.split(/\s+/);
         const allExactMatches = new Set();
         let totalScore = 0;
+
+        const globalUsedFuzzyTokens = new Set();
+        const fuzzyStopwords = new Set(['block']);
+        const allowedTerms = new Set([
+            ...fuzzyRegexTermsByKey.intent.map(t => t.text),
+            ...fuzzyRegexTermsByKey.weapons.map(t => t.text),
+            ...fuzzyRegexTermsByKey.finishes.map(t => t.text),
+        ]);
 
         for (const [key, regex] of Object.entries(regexTradeTests)) {
             let matches = [...normalized.matchAll(regex)].map(m => m[0]);
@@ -596,7 +648,11 @@
 
             const allowFuzzy = !skipFuzzy && fuzzyRegexTermsByKey[key] && exactCount === 0;
             if (allowFuzzy) {
-                fuzzyMatches = getFuzzyMatchesForKey(tokens, fuzzyRegexTermsByKey[key], allExactMatches, key);
+                fuzzyMatches = getFuzzyMatchesForKey(tokens, fuzzyRegexTermsByKey[key], allExactMatches, {
+                    globalUsedFuzzyTokens,
+                    fuzzyStopwords,
+                    allowlist: allowedTerms
+                });
                 fuzzyCount = key === 'intent' ? Math.min(1, fuzzyMatches.length) : fuzzyMatches.length;
                 fuzzyMatchByKey[key] = fuzzyMatches;
             } else {
