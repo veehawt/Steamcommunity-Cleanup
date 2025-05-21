@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.30
+// @version      0.4.31
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -120,7 +120,7 @@
         |stolen|scrim(?:s|z)?|scrimmages?|should|some(body|how|one|thing|what|where)|suggestions?|team(?:mate|mates|m8s)?|mates?|m8s?|rant(ing)?|restrict(ed|ing|ions?|s)?|revers(e|al)?|
         |rework(ed|ing|s)?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|servers?|sold|stop|store page|strats?|stretched|stuck|tactics?|thoughts?|
         |to play\s+.+?(?:\s+with)?|training|tutorials?|unable|unauthorized|unbans?|uninstall(ed|ing|s)?|updates?|unexpected|us(e|es|ers|ing)|vac|valve|version(ing|s)?|visual(ly|s)?|
-        |wait(ing)? time|warnings?|we|what|when|where|which|who|why|wingman|wish(ed|s)?|wishlist(ed|ing|s)?|work(ing)?|worst|would you|\?|
+        |wait(ing)? time|warnings?|we|what|when|where|which|who|why|wingman|wish(ed|s)?|wishlist(ed|ing|s)?|work(ing)?|worst|would you|
       )\b`, 'gi');
 
 
@@ -278,7 +278,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.30';
+    const SCRIPT_VERSION = '0.4.31';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -662,6 +662,13 @@
             if (key === 'intent') {
                 exactCount = Math.min(1, exactCount);
                 if (exactCount === 1) fuzzyCount = 0;
+            }
+
+            if (key === 'negatives') {
+                if (normalized.includes('?') && !matches.includes('?')) {
+                    matches.push('?');
+                    exactCount++;
+                }
             }
 
             const weight = patternWeights[key] || 0;
