@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.32
+// @version      0.4.33
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -79,8 +79,8 @@
       )\b`, 'gi');
 
     const regexWeapons = new RegExp(String.raw`\b(
-        |(for[\s-]?)?kni(fe|ve)(s|z)?|bayonet|bowie|bfk|butterfly|flip|gut|huntsman|kara(mbit)?|kukri|m9|nomad|paracord|(shadow[\s-]?)?daggers?|skeleton|stiletto|survival|talon|ursus|
-        |(for[\s-]?)?glove(s|z)?|blood[\s-]?hound|broken[\s-]?fang|driver|hand[\s-]?wraps?|hydra|moto|specialist|sport|
+        |kni(fe|ve)(s|z)?|bayonet|bowie|bfk|butterfly|flip|gut|huntsman|kara(mbit)?|kukri|m9|nomad|paracord|(shadow[\s-]?)?daggers?|skeleton|stiletto|survival|talon|ursus|
+        |glove(s|z)?|blood[\s-]?hound|broken[\s-]?fang|driver|hand[\s-]?wraps?|hydra|moto|specialist|sport|
         |ak(?:[-\s]?47)?|aug|awp|famas|galil|g3sg1|m4|m4a1[-\s]?s|m4a4|a4|scar[-\s]?20|ssg|
         |bizon|mac[-\s]?10|mp7|mp9|ump|mag[-\s]?7|nova|negev|
         |cz75|deagle|desert eagle|dgl|five[-\s]?seven|glock|p2000|p250|tec[-\s]?9|usp[-\s]?s|agents?|
@@ -279,7 +279,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.32';
+    const SCRIPT_VERSION = '0.4.33';
     const devMode = false;
     const tradeCheckCache = new Map();
 
@@ -506,7 +506,7 @@
         return fuzzyMatches;
     }
 
-    function applyFuzzyEnhancement(showAll) {
+    function applyFuzzyEnhancement(showAll, showBlocked) {
         const topics = document.querySelectorAll('.forum_topic');
 
         topics.forEach(topic => {
@@ -532,6 +532,10 @@
 
         if (devMode) {
             console.groupEnd();
+        }
+
+        if (!showAll && !showBlocked) {
+            setVisibleCount();
         }
 
         initCounts();
