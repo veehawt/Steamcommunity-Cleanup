@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.34
+// @version      0.4.35
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -281,7 +281,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.34';
+    const SCRIPT_VERSION = '0.4.35';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -1139,36 +1139,65 @@
     function getForumLocationInfo() {
         let forumType = null;
         let subForum = null;
+        let topicTitle = null;
         let pageNumber = 1;
 
-        const breadcrumbs = document.querySelector('.group_breadcrumbs.discussions_breadcrumbs');
-        const appNameDiv = document.querySelector('.apphub_AppName');
+        const isMiniDiscussionList = !!document.querySelector('.rightSectionTopTitle');
 
-        if (breadcrumbs) {
-            forumType = "Steam Forums";
+        if (!isMiniDiscussionList && (isGeneralForum || isTopicsContainer)) {
+            const breadcrumbs = document.querySelector('.group_breadcrumbs.discussions_breadcrumbs');
+            const appNameDiv = document.querySelector('.apphub_AppName');
 
-            const selectedSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a');
-            if (selectedSubForum) {
-                subForum = selectedSubForum.textContent.trim();
-            }
+            if (breadcrumbs) {
+                const selectedSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a');
+                if (selectedSubForum) {
+                    forumType = "Steam Forums";
+                    subForum = selectedSubForum.textContent.trim();
+                }
+            } else if (appNameDiv) {
+                forumType = appNameDiv.textContent.trim();
 
-        } else if (appNameDiv) {
-            forumType = appNameDiv.textContent.trim();
-
-            const selectedGameSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a.whiteLink');
-            if (selectedGameSubForum) {
-                subForum = selectedGameSubForum.textContent.trim();
+                const selectedGameSubForum = document.querySelector('.rightbox_list_option.selected .forum_list_name a.whiteLink');
+                if (selectedGameSubForum) {
+                    subForum = selectedGameSubForum.textContent.trim();
+                }
             }
         }
 
-        const activePage = document.querySelector('.forum_paging_pagelink.active');
+        if (isDiscussion || isCommentsContainer || isMiniDiscussionList) {
+            const breadcrumbsD =
+                document.querySelector('.forum_breadcrumbs.group_content_bodytext.breadcrumbs') ||
+                document.querySelector('.group_breadcrumbs.discussions_breadcrumbs');
+
+            if (breadcrumbsD) {
+                const links = breadcrumbsD.querySelectorAll('a');
+                if (links.length <= 2) {
+                    forumType = links[0].textContent.trim();
+                    subForum = links[1].textContent.trim();
+                }
+                if (links.length >= 3) {
+                    forumType = links[1].textContent.trim();
+                    subForum = links[2].textContent.trim();
+                }
+            }
+
+            const topicTitleDiv = document.querySelector('.topic');
+            if (topicTitleDiv) {
+                topicTitle = topicTitleDiv.textContent.trim();
+            }
+        }
+
+        const activePage =
+            document.querySelector('.forum_paging_pagelink.active') ||
+            document.querySelector('.commentthread_pagelink.active');
+
         if (activePage) {
             pageNumber = parseInt(activePage.textContent.trim(), 10);
         }
 
-        const locationInfo = [forumType, subForum, `Page ${pageNumber}`]
-        .filter(Boolean)
-        .join(' - ') || 'Unknown Forum Location';
+        const locationInfo = [forumType, subForum, topicTitle, `Page ${pageNumber}`]
+            .filter(Boolean)
+            .join(' - ') || 'Unknown Forum Location';
 
         return locationInfo;
     }
