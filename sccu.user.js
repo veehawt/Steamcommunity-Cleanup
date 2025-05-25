@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.35
+// @version      0.4.36
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -281,7 +281,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.35';
+    const SCRIPT_VERSION = '0.4.36';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -1014,11 +1014,77 @@
         if (skipFuzzy) {
             pendingDevLogs.set(cacheKey, debugInfo);
         } else {
-            logDevInfo(debugInfo);
+            logTopicInfo(debugInfo);
             pendingDevLogs.delete(cacheKey);
         }
 
         return debugInfo;
+    }
+
+    function buildTopicLabel({ raw, isKeywordMatch, isRegexMatch, isTrade, hasFuzzyMatches }) {
+        let label = `"${raw}"`;
+        const coreTags = [];
+
+        if (isKeywordMatch) coreTags.push('Keyword');
+        if (isRegexMatch) coreTags.push('Regex');
+        if (isTrade) coreTags.push('Trade');
+
+        const styleArgs = [];
+
+        if (coreTags.length) {
+            label += ` %c[%c${coreTags.join('+')}%c]%c`;
+        }
+        if (hasFuzzyMatches) {
+            label += ` %c[%cF%cu%cz%cz%cy%c]%c`;
+        }
+
+        let groupStyleMain = logStyles.label;
+        if (isTrade && isRegexMatch) {
+            groupStyleMain = 'color: #d17842; font-weight: bold;';
+        } else if (isTrade) {
+            groupStyleMain = logStyles.trade;
+        } else if (isRegexMatch) {
+            groupStyleMain = logStyles.regex;
+        } else if (isKeywordMatch) {
+            groupStyleMain = logStyles.keyword;
+        }
+
+        styleArgs.push(groupStyleMain);
+
+        if (coreTags.length) {
+            styleArgs.push(
+                groupStyleMain, // [
+                groupStyleMain, // content
+                groupStyleMain, // ]
+                groupStyleMain
+            );
+        }
+
+        if (hasFuzzyMatches) {
+            styleArgs.push(
+                'color: #ff0000;', // [
+                'color: #ff1a00;', // F
+                'color: #ff5500;', // u
+                'color: #ff8800;', // z
+                'color: #ffaa00;', // z
+                'color: #ffcc00;', // y
+                'color: #ffee00;', // ]
+                logStyles.label
+            );
+        }
+
+        return { label, styleArgs };
+    }
+
+    function getTopicDetailLines({ keywordMatches, raw, matchedByKey, fuzzyMatchByKey, scoreByKey }) {
+        const lines = [];
+
+        lines.push(...logKeywordMatches(keywordMatches));
+        lines.push(...logRegexMatches(raw));
+        lines.push(...logTradeMatches(matchedByKey, scoreByKey));
+        lines.push(...logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey));
+
+        return lines;
     }
 
     function logKeywordMatches(keywordMatches) {
@@ -1088,6 +1154,131 @@
         return lines;
     }
 
+    function logTopicInfo(params) {
+        const {
+            raw,
+            normalized,
+            isTrade,
+            isRegexMatch,
+            matchedByKey = {},
+            fuzzyMatchByKey = {},
+            score = 0,
+            scoreByKey = {},
+            keywordMatches = [],
+            confidence
+        } = params;
+
+        const isKeywordMatch = keywordMatches?.length > 0;
+        const hasFuzzyMatches = Object.values(fuzzyMatchByKey || {}).some(arr => arr.length > 0);
+
+        const { label, styleArgs } = buildTopicLabel({ raw, isKeywordMatch, isRegexMatch, isTrade, hasFuzzyMatches });
+
+        const lines = getTopicDetailLines({ keywordMatches, raw, matchedByKey, fuzzyMatchByKey, scoreByKey });
+
+        const tradeKeys = ['intent', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
+        const hasTradeMatches = tradeKeys.some(key =>
+            (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
+        );
+
+        if (hasTradeMatches) {
+            const scoreColor = score >= 3 ? logStyles.trade : logStyles.default;
+            const qualitativeColor = score >= 3 ? logStyles.trade : logStyles.default;
+            lines.push({
+                text: `%cTrade-related score: %c${score} %c- %c${confidence}`,
+                styles: [logStyles.label, scoreColor, logStyles.label, qualitativeColor]
+            });
+        }
+
+        console.groupCollapsed(`%c${label}`, ...styleArgs);
+        logKeyValue("Normalized", `"${normalized}"`);
+
+        logInfoRow([
+            ["isKeyword", isKeywordMatch, isKeywordMatch && 'keyword'],
+            ["isRegex", isRegexMatch, isRegexMatch && 'regex'],
+            ["isTrade", isTrade, isTrade && 'trade']
+        ]);
+
+        for (const line of lines) {
+            console.log(line.text, ...line.styles);
+        }
+
+        console.groupEnd();
+    }
+
+
+
+    function extractCommentMeta(commentElem, raw, isRegexMatch) {
+        const number = commentElem.querySelector('.forum_comment_permlink a')?.textContent.trim() || '??';
+        const authorBdi = commentElem.querySelector('.commentthread_author_link bdi');
+        const baseName = authorBdi?.childNodes[0]?.textContent?.trim() || 'Unknown';
+        const nickname = authorBdi?.querySelector('.nickname_name')?.textContent?.trim();
+        const authorName = nickname ? `${baseName} (${nickname})` : baseName;
+
+        let extra = '';
+        let extraStyle = logStyles.label;
+
+        if (isRegexMatch) {
+            const matches = [];
+            for (const [desc, pattern] of [...regexLanguage, ...regexSpam, ...regexTrade]) {
+                const match = raw.match(pattern);
+                if (match) {
+                    matches.push(`${desc}: ${match[0]}`);
+                    break;
+                }
+            }
+            extra = matches.length ? `[Regex] ${matches.join(', ')}` : '[Regex]';
+            extraStyle = logStyles.regex;
+
+        } else if (isBlockedComment(commentElem)) {
+            extra = 'Blocked user';
+            extraStyle = logStyles.blocked;
+        }
+
+        const { quotes, comment } = extractCommentText(commentElem.querySelector('.commentthread_comment_text'));
+        const blockedIds = new Set([...document.querySelectorAll('.commentthread_deleted_expanded[id^="comment_"]')]
+            .map(el => el.id.replace('comment_', '')));
+
+        const quoteBlocks = quotes.map(({ header, body, quotedId }) => {
+            const isBlocked = quotedId && blockedIds.has(quotedId);
+            const quoteStyle = `${isBlocked ? logStyles.quoted : ''} font-style: italic; padding: 2px 6px; border-left: 3px solid #ccc; white-space: pre-wrap;`;
+            const cleanedBody = body.replace(/\n{3,}/g, '\n\n');
+            const text = header
+                ? `> ${header}${header.endsWith(':') ? '' : ':'}\n${cleanedBody}`
+                : `> ${cleanedBody}`;
+            return { text, style: quoteStyle };
+        });
+
+        const formattedComment = comment.replace(/\n{3,}/g, '\n\n');
+        const commentStyle = isBlockedComment(commentElem) || isFilteredComment(commentElem)
+            ? `${extraStyle} white-space: pre-wrap;`
+            : 'white-space: pre-wrap;';
+
+        return {
+            number,
+            authorName,
+            extra,
+            extraStyle,
+            quoteBlocks,
+            comment: formattedComment,
+            commentStyle
+        };
+    }
+
+    function buildCommentLabel({ number, authorName, extra, extraStyle }) {
+        const labelParts = [
+            { text: number, style: extraStyle },
+            { text: ' - ', style: logStyles.label },
+            { text: authorName, style: extraStyle }
+        ];
+
+        if (extra) {
+            labelParts.push({ text: ' - ', style: logStyles.label });
+            labelParts.push({ text: extra, style: extraStyle });
+        }
+
+        return labelParts;
+    }
+
     function extractCommentText(commentTextElem) {
         if (!commentTextElem) return { quotes: [], comment: '[No content]' };
 
@@ -1135,6 +1326,74 @@
         const comment = clone.textContent.replace(/\n{2,}/g, '\n').trim();
         return { quotes, comment };
     }
+
+    function logCommentInfo(raw, isRegexMatch, commentElem) {
+        const meta = extractCommentMeta(commentElem, raw, isRegexMatch);
+        const labelParts = buildCommentLabel(meta);
+        openStyledGroup(labelParts);
+
+        for (const { text, style } of meta.quoteBlocks) {
+            logMultilineBlock(text, style);
+        }
+
+        logMultilineBlock(meta.comment, meta.commentStyle);
+
+        console.groupEnd();
+    }
+
+    function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
+        let baseStyle;
+        if (overrideStyle) {
+            baseStyle = overrideStyle;
+        } else if (matches.length) {
+            baseStyle = isNegative ? logStyles.default : logStyles.trade;
+        } else {
+            baseStyle = logStyles.default;
+        }
+
+        const matchText = matches.join(', ');
+
+        let weightText = '';
+        if (weightSum) {
+            let weightDisplay;
+            if (isNegative) {
+                weightDisplay = `(-${Math.abs(weightSum)})`;
+            } else {
+                weightDisplay = `(+${weightSum})`;
+            }
+            weightText = ` %c${weightDisplay}`;
+        }
+
+        return {
+            text: `%c${label}: %c${matchText}${weightText}`,
+            styles: [logStyles.label, baseStyle, ...(weightText ? [baseStyle] : [])]
+        };
+    }
+
+    function logKeyValue(label, value, labelStyle = logStyles.label, valueStyle = logStyles.default) {
+        console.log(`%c${label}:%c ${value}`, labelStyle, valueStyle);
+    }
+
+    function logInfoRow(pairs) {
+        const format = pairs.map(() => '%c%s:%c%s').join('   ');
+        const args = pairs.flatMap(([label, value, highlightKey]) => [
+            logStyles.label, label,
+            highlightKey ? logStyles[highlightKey] : logStyles.default, String(value)
+        ]);
+        console.log(format, ...args);
+    }
+
+    function logMultilineBlock(text, style) {
+        console.log(`%c${text}`, style);
+    }
+
+    function openStyledGroup(labelParts) {
+        const format = labelParts.map(() => '%c%s').join(' ');
+        const args = labelParts.flatMap(part => [part.style, part.text]);
+        console.groupCollapsed(format, ...args);
+    }
+
+
 
     function getForumLocationInfo() {
         let forumType = null;
@@ -1208,230 +1467,6 @@
             devLogGroupOpen = true;
             loggedLocations.add(locationInfo);
         }
-    }
-
-    function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
-        let baseStyle;
-        if (overrideStyle) {
-            baseStyle = overrideStyle;
-        } else if (matches.length) {
-            baseStyle = isNegative ? logStyles.default : logStyles.trade;
-        } else {
-            baseStyle = logStyles.default;
-        }
-
-        const matchText = matches.join(', ');
-
-        let weightText = '';
-        if (weightSum) {
-            let weightDisplay;
-            if (isNegative) {
-                weightDisplay = `(-${Math.abs(weightSum)})`;
-            } else {
-                weightDisplay = `(+${weightSum})`;
-            }
-            weightText = ` %c${weightDisplay}`;
-        }
-
-        return {
-            text: `%c${label}: %c${matchText}${weightText}`,
-            styles: [logStyles.label, baseStyle, ...(weightText ? [baseStyle] : [])]
-        };
-    }
-
-    function logDevInfo({
-        raw,
-        normalized,
-        isTrade,
-        isRegexMatch,
-        matchedByKey = {},
-        fuzzyMatchByKey = {},
-        score = 0,
-        scoreByKey = {},
-        keywordMatches = [],
-        confidence
-    }) {
-        const isKeywordMatch = keywordMatches?.length > 0;
-
-        const lines = [];
-
-        lines.push(...logKeywordMatches(keywordMatches));
-        lines.push(...logRegexMatches(raw));
-        lines.push(...logTradeMatches(matchedByKey, scoreByKey));
-        lines.push(...logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey));
-
-        const tradeKeys = ['intent', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
-        const hasTradeMatches = tradeKeys.some(key =>
-            (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
-        );
-
-        if (hasTradeMatches) {
-            const scoreColor = score >= 3 ? logStyles.trade : logStyles.default;
-            const qualitativeColor = score >= 3 ? logStyles.trade : logStyles.default;
-            lines.push({
-                text: `%cTrade-related score: %c${score} %c- %c${confidence}`,
-                styles: [logStyles.label, scoreColor, logStyles.label, qualitativeColor]
-            });
-        }
-
-        let label = `"${raw}"`;
-        const coreTags = [];
-
-        if (isKeywordMatch) coreTags.push('Keyword');
-        if (isRegexMatch) coreTags.push('Regex');
-        if (isTrade) coreTags.push('Trade');
-
-        const hasFuzzyMatches = Object.values(fuzzyMatchByKey || {}).some(arr => arr.length > 0);
-
-        if (coreTags.length) {
-            label += ` %c[%c${coreTags.join('+')}%c]%c`;
-        }
-        if (hasFuzzyMatches) {
-            label += ` %c[%cF%cu%cz%cz%cy%c]%c`;
-        }
-
-        let groupStyleMain = logStyles.label;
-        if (isTrade && isRegexMatch) {
-            groupStyleMain = 'color: #d17842; font-weight: bold;';
-        } else if (isTrade) {
-            groupStyleMain = logStyles.trade;
-        } else if (isRegexMatch) {
-            groupStyleMain = logStyles.regex;
-        } else if (isKeywordMatch) {
-            groupStyleMain = logStyles.keyword;
-        }
-
-        const styleArgs = [groupStyleMain];
-        if (coreTags.length) {
-            styleArgs.push(
-                groupStyleMain, // [
-                groupStyleMain, // content
-                groupStyleMain, // ]
-                groupStyleMain
-            );
-        }
-        if (hasFuzzyMatches) {
-            styleArgs.push(
-                'color: #ff0000;', // [
-                'color: #ff1a00;', // F
-                'color: #ff5500;', // u
-                'color: #ff8800;', // z
-                'color: #ffaa00;', // z
-                'color: #ffcc00;', // y
-                'color: #ffee00;', // ]
-                logStyles.label
-            );
-        }
-
-        console.groupCollapsed(`%c${label}`, ...styleArgs);
-        console.log(`%cNormalized:%c "${normalized}"`, logStyles.label, logStyles.default);
-        console.log(
-            `%cisKeyword:%c ${isKeywordMatch}   %cisRegex:%c ${isRegexMatch}   %cisTrade:%c ${isTrade}`,
-            logStyles.label, isKeywordMatch ? logStyles.keyword : logStyles.label,
-            logStyles.label, isRegexMatch ? logStyles.regex : logStyles.label,
-            logStyles.label, isTrade ? logStyles.trade : logStyles.label
-        );
-
-        for (const line of lines) {
-            console.log(line.text, ...line.styles);
-        }
-
-        console.groupEnd();
-    }
-
-    function logCommentInfo(raw, isRegexMatch, commentElem, reason = '') {
-        const number = commentElem.querySelector('.forum_comment_permlink a')?.textContent.trim() || '??';
-        const authorBdi = commentElem.querySelector('.commentthread_author_link bdi');
-        const baseName = authorBdi?.childNodes[0]?.textContent?.trim() || 'Unknown';
-        const nickname = authorBdi?.querySelector('.nickname_name')?.textContent?.trim();
-        const authorName = nickname ? `${baseName} (${nickname})` : baseName;
-
-        let extra = '';
-        let extraStyle = logStyles.label;
-
-        if (isRegexMatch) {
-            const matches = [];
-
-            for (const [description, pattern] of regexLanguage) {
-                const match = raw.match(pattern);
-                if (match) {
-                    matches.push(`language: ${match[0]} // ${description}`);
-                    break;
-                }
-            }
-            for (const [description, pattern] of regexSpam) {
-                const match = raw.match(pattern);
-                if (match) {
-                    matches.push(`spam: ${match[0]} // ${description}`);
-                    break;
-                }
-            }
-            for (const [description, pattern] of regexTrade) {
-                const match = raw.match(pattern);
-                if (match) {
-                    matches.push(`trade: ${match[0]} // ${description}`);
-                    break;
-                }
-            }
-
-            extra = matches.length ? `[Regex] ${matches.join(', ')}` : `[Regex]`;
-            extraStyle = logStyles.regex;
-
-        } else if (isBlockedComment(commentElem)) {
-            extra = 'comment by blocked user';
-            extraStyle = logStyles.blocked;
-
-        } else if (hideBlockedCommentQuote && isBlockedCommentQuote(commentElem)) {
-            extra = 'comment quoting blocked user';
-            extraStyle = logStyles.quoted;
-        }
-
-        const commentTextElem = commentElem.querySelector('.commentthread_comment_text');
-        const { quotes, comment } = extractCommentText(commentTextElem);
-
-        const hasExtra = Boolean(extra);
-        const groupFormat = hasExtra
-            ? `%c${number}%c - %c${authorName}%c - %c${extra}`
-            : `%c${number}%c - %c${authorName}`;
-        const groupArgs = hasExtra
-            ? [groupFormat, extraStyle, logStyles.label, extraStyle, logStyles.label, extraStyle]
-            : [groupFormat, extraStyle, logStyles.label, extraStyle];
-
-        console.groupCollapsed(...groupArgs);
-
-        const blockedCommentIds = new Set(
-            Array.from(document.querySelectorAll('.commentthread_deleted_expanded[id^="comment_"]'))
-                .map(el => el.id.replace('comment_', ''))
-        );
-
-        for (const { header, body, quotedId } of quotes) {
-            const isBlockedQuote = quotedId && blockedCommentIds.has(quotedId);
-
-            const quoteStyle = isBlockedQuote
-                ? `${logStyles.quoted} font-style: italic; padding: 2px 6px; border-left: 3px solid #ccc; margin: 4px 0; white-space: pre-wrap;`
-                : `font-style: italic; padding: 2px 6px; border-left: 3px solid #ccc; margin: 4px 0; white-space: pre-wrap;`;
-
-            const cleanedBody = body.replace(/\n{3,}/g, '\n\n');
-
-            let quoteBlock;
-            if (header) {
-
-                quoteBlock = header.endsWith(':')
-                    ? `> ${header}\n${cleanedBody}`
-                    : `> ${header}:\n${cleanedBody}`;
-            } else {
-                quoteBlock = `> ${cleanedBody}`;
-            }
-
-            console.log(`%c${quoteBlock}`, quoteStyle);
-        }
-
-        const formattedComment = comment.replace(/\n{3,}/g, '\n\n');
-        const isProblematic = isBlockedComment(commentElem) || isFilteredComment(commentElem);
-        const commentStyle = isProblematic ? `${extraStyle} white-space: pre-wrap;` : 'white-space: pre-wrap;';
-        console.log(`%c${formattedComment}`, commentStyle);
-
-        console.groupEnd();
     }
 
     function logScriptBanner() {
