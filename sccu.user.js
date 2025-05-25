@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.36
+// @version      0.4.37
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -281,7 +281,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.36';
+    const SCRIPT_VERSION = '0.4.37';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -352,6 +352,12 @@
     };
 
 
+    function normalizeRaw(raw) {
+        return raw
+            .toLowerCase()
+            .replace(/\s+/g, ' ') // collapse tabs, newlines, multiple spaces
+            .trim();
+    }
 
     function normalizeContent(content) {
         return content
@@ -588,7 +594,7 @@
         if (devMode) {
             output = getDebugResult({
                 ...result,
-                raw: content.toLowerCase(),
+                raw: normalizeRaw(content),
                 isRegexMatch,
                 keywordMatches,
                 topic,
@@ -1392,8 +1398,6 @@
         const args = labelParts.flatMap(part => [part.style, part.text]);
         console.groupCollapsed(format, ...args);
     }
-
-
 
     function getForumLocationInfo() {
         let forumType = null;
