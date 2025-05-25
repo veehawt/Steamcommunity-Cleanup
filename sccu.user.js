@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.33
+// @version      0.4.34
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -112,9 +112,9 @@
         |aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|doesn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
         |artists?|attention|authentic(at(ed|es|ing|ions?|ors?))?|back|badges?|ban(ned|ning|s)?|because|(been|has) limited|best|black screen|(bring|brought) back|broken(?![\s-]?fang)|
         |bugs?|builds?|can (I|you)|cannot|casuals?|chang(e|es|ing)|clans?|clients?|confirm(ed|ing|s)?|crash(ed|es)?|created|crosshairs?|deleted?|desktop|disappear(ed|ing|s)?|
-        |discussions?|dlcs?|do(es)? (I|you)?|drop(ping|s)?|duo|trio|quad|error|extend(?:ed|s|ion|ions)?|f2p|free2play|free[\s-]?to[\s-]?play|fail(ing|s)?|fix(ed|es)?|for \d+ days|
+        |discussions?|dlcs?|do(es)? (I|you)?|drop(ping|s)?|duo|trio|quad|error|extend(?:ed|s|ion|ions)?|f2p|free2play|free[\s-]?to[\s-]?play|fail(ing|s)?|feedbacks?|fix(ed|es)?|for \d+ days|
         |forums?|fps|friends?|gam(es|ing)|game store|glitch(ed|es|ing)?|groups?|hard[\s-]?stuck|hat(e(d|s)|er(s)?|ful(ly)?|ing|red)|help(ed|ing|s)?|hid(e|ing)|histor(y|ies)|hold(ings?|s)?|
-        |hop(e|ing)|how (can|do)?|(I )?opened|icons?|idea|info(rmation)?s?|install(ed|ing|s)?|is (it|there)|issues?|lags?|let (me|us)|(?:re)?load(?:ing)?|lost|made|match(es|ing)?|
+        |hop(e|ing)|how (can|do)?|(I )?opened|icons?|idea|improv(ement(s)?|ing)|info(rmation)?s?|install(ed|ing|s)?|is (it|there)|issues?|lags?|let (me|us)|(?:re)?load(?:ing)?|lost|made|match(es|ing)?|
         |matchmaking|mm|menus?|miss(ed|es|ing)?|multiplayer|mute(d|s)?|name|network(ing|s)?|no trad(e|es|ing)|not (available|work(ing)?)?|opinions?|option(al|s)?|or not|patch(es|ing)?|
         |people|permission|phones?|players?|point shop|polic(ing|y|ies)|possibl(e|y)|practice|premiere?|prices?|prime|privacy|problems?|profiles?|questions?|rant(ing)?|
         |rat(e(s)?|ing(s)?)|receiv(e|ed|ing)|recruiting|remove(d|s)?|reset(s|ted|ting)?|resolutions?|resolv(e|es|ing)|revamps?|rules|scam(?:s|med)?|stolen|scrim(?:s|z)?|scrimmages?|
@@ -179,7 +179,7 @@
             background-color: #2b2230 !important;
         }
         .blocked-user-comment-quote {
-            background-color: rgba(20, 29, 41, 0.8) !important;
+            background-color: #141d29 !important;
         }
         .blocked-user-OP {
             background: linear-gradient(to bottom right, #3a2c3f, #1a141c) !important;
@@ -271,18 +271,20 @@
     document.head.appendChild(styleSheet);
 
     const logStyles = {
-        label: 'color: #888; font-weight: bold;',
+        label: 'color: #888888;',
         default: 'color: #54a5d4;',
         keyword: 'color: #d3a588;',
-        regex: 'color: #765574;',
+        regex: 'color: #773d61;',
         trade: 'color: #2ca58d;',
+        blocked: 'color: #d4545f;',
+        quoted: 'color: #d48754;'
     };
 
 
-    const SCRIPT_VERSION = '0.4.33';
+    const SCRIPT_VERSION = '0.4.34';
     const devMode = false;
     const tradeCheckCache = new Map();
-
+    const loggedComments = new Set();
     const loggedLocations = new Set();
     let devLogGroupOpen = false;
 
@@ -319,10 +321,10 @@
 
     const fuzzyRegexTermsByKey = Object.fromEntries(
         Object.entries(regexTradeTests)
-        .filter(([key]) =>
+            .filter(([key]) =>
                 ['intent', 'weapons', 'finishes'].includes(key)
-               )
-        .map(([key, regex]) => [key, extractTermsFromRegex(regex)])
+            )
+            .map(([key, regex]) => [key, extractTermsFromRegex(regex)])
     );
 
     const buttonManager = createButtonStateManager();
@@ -399,12 +401,12 @@
         const terms = new Set();
 
         let cleaned = source
-        .replace(/\\b/g, '')
-        .replace(/\(\?:/g, '(')
-        .replace(/\\s\??/g, ' ')
-        .replace(/[-\s]?\?/g, ' ')
-        .replace(/[^a-zA-Z0-9|() ]+/g, '')
-        .replace(/\s{2,}/g, ' ');
+            .replace(/\\b/g, '')
+            .replace(/\(\?:/g, '(')
+            .replace(/\\s\??/g, ' ')
+            .replace(/[-\s]?\?/g, ' ')
+            .replace(/[^a-zA-Z0-9|() ]+/g, '')
+            .replace(/\s{2,}/g, ' ');
 
         function expandGroup(base, groupContent) {
             const variants = groupContent.split('|');
@@ -430,9 +432,9 @@
         }
 
         const looseTerms = cleaned
-        .split('|')
-        .map(t => t.trim())
-        .filter(t => t.length >= 3);
+            .split('|')
+            .map(t => t.trim())
+            .filter(t => t.length >= 3);
 
         for (const term of looseTerms) {
             terms.add(term);
@@ -513,21 +515,7 @@
             if (topic.closest('.rightSectionTopTitle')) return;
             if (topic.classList.contains('blocked-user')) return;
 
-            const topicName = topic.querySelector('.forum_topic_name');
-            if (!topicName) return;
-
-            const text = topicName.textContent.trim();
-
-            const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(text, keywords);
-            const { isMatch: isRegexMatch } = isRegex(text, regexFiltersTopics);
-
-            const tradeResult = isTradeRelated(text, topic, isRegexMatch, keywordMatches, false);
-            const isTrade = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
-
-            topic.dataset.tradeMatch = isTrade;
-            topic.dataset.regexMatch = isRegexMatch;
-
-            applyTopicClasses(topic, isKeywordMatch, isRegexMatch, isTrade, showAll);
+            evaluateTopicFilters(topic, showAll, false);
         });
 
         if (devMode) {
@@ -543,8 +531,8 @@
 
     function isKeywords(text, keywordList) {
         const keywordMatches = keywordList.filter(keyword =>
-                                                  text.toLowerCase().includes(keyword.toLowerCase())
-                                                 );
+            text.toLowerCase().includes(keyword.toLowerCase())
+        );
         return {
             isMatch: keywordMatches.length > 0,
             keywordMatches
@@ -553,11 +541,11 @@
 
     function isRegex(text, regexList) {
         const regexMatches = regexList
-        .map(entry => {
-            const regex = Array.isArray(entry) ? entry[1] : entry;
-            return regex instanceof RegExp && regex.test(text) ? regex.toString() : null;
-        })
-        .filter(Boolean);
+            .map(entry => {
+                const regex = Array.isArray(entry) ? entry[1] : entry;
+                return regex instanceof RegExp && regex.test(text) ? regex.toString() : null;
+            })
+            .filter(Boolean);
 
         return {
             isMatch: regexMatches.length > 0,
@@ -732,7 +720,7 @@
 
         const blockedCommentIds = new Set(
             Array.from(document.querySelectorAll('.commentthread_deleted_expanded[id^="comment_"]'))
-            .map(el => el.id.replace('comment_', ''))
+                .map(el => el.id.replace('comment_', ''))
         );
 
         const quoteLinks = commentText.querySelectorAll('a[href^="#c"]');
@@ -754,22 +742,33 @@
 
         const textClone = commentText.cloneNode(true);
         textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
-        const cleanedText = textClone.textContent.trim();
 
+        const cleanedText = textClone.textContent.trim();
         if (!cleanedText) return false;
 
-        const { isMatch, regexMatches } = isRegex(cleanedText, regexFiltersComments);
-
-        if (isMatch) {
-            console.log('%cFiltered comment matched:', 'color:red;font-weight:bold;', cleanedText);
-            console.log('Matched by regex:', regexMatches);
-            return true;
-        }
-
-        return false;
+        const { isMatch } = isRegex(cleanedText, regexFiltersComments);
+        return isMatch;
     }
 
 
+
+    function evaluateTopicFilters(topic, showAll, includeLogs = true) {
+        const topicName = topic.querySelector('.forum_topic_name');
+        if (!topicName) return;
+
+        const text = topicName.textContent.trim();
+
+        const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(text, keywords);
+        const { isMatch: isRegexMatch } = isRegex(text, regexFiltersTopics);
+
+        const tradeResult = isTradeRelated(text, topic, isRegexMatch, keywordMatches, includeLogs);
+        const isTrade = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
+
+        topic.dataset.tradeMatch = isTrade;
+        topic.dataset.regexMatch = isRegexMatch;
+
+        applyTopicClasses(topic, isKeywordMatch, isRegexMatch, isTrade, showAll);
+    }
 
     function applyTopicClasses(topic, keywordMatch, regexMatch, tradeMatch, showAll) {
         topic.classList.remove(
@@ -804,10 +803,8 @@
     function filterTopics(showAll = devMode, showBlocked = false) {
         const locationInfo = getForumLocationInfo();
 
-        if (devMode && !loggedLocations.has(locationInfo)) {
-            console.groupCollapsed(`%cDev Log @ [${locationInfo}]`, 'color: gray;');
-            devLogGroupOpen = true;
-            loggedLocations.add(locationInfo);
+        if (isGeneralForum) {
+            devLogGroupStart(locationInfo);
         }
 
         const topics = document.querySelectorAll('.forum_topic');
@@ -828,27 +825,15 @@
                 return;
             }
 
-            const topicName = topic.querySelector('.forum_topic_name');
-            if (!topicName) return;
-
-            const text = topicName.textContent.trim();
-
-            const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(text, keywords);
-            const { isMatch: isRegexMatch } = isRegex(text, regexFiltersTopics);
-
-            const tradeResult = isTradeRelated(text, topic, isRegexMatch, keywordMatches, true);
-            const isTrade = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
-
-            topic.dataset.tradeMatch = isTrade;
-            topic.dataset.regexMatch = isRegexMatch;
-
-            applyTopicClasses(topic, isKeywordMatch, isRegexMatch, isTrade, showAll);
+            evaluateTopicFilters(topic, showAll, true);
         });
 
         initCounts();
 
         setTimeout(() => {
-            applyFuzzyEnhancement(showAll, showBlocked);
+            if (isGeneralForum) {
+                applyFuzzyEnhancement(showAll, showBlocked);
+            }
 
             if (devLogGroupOpen) {
                 console.groupEnd();
@@ -858,6 +843,12 @@
     }
 
     function filterComments(showAll = devMode, showBlocked = false) {
+        const locationInfo = getForumLocationInfo();
+
+        if (isDiscussion) {
+            devLogGroupStart(locationInfo);
+        }
+
         filterOP(showAll, showBlocked);
 
         const comments = document.querySelectorAll('.commentthread_comment');
@@ -879,28 +870,58 @@
                 'blocked-user-comment-quote'
             );
 
+            let reason = '';
+
             if (isBlockedComment(comment)) {
                 comment.classList.add('blocked-user-comment');
                 comment.style.display = (showAll || showBlocked) ? '' : 'none';
-                return;
-            }
-
-            if (hideBlockedCommentQuote && isBlockedCommentQuote(comment)) {
+                reason = 'comment by blocked user';
+            } else if (hideBlockedCommentQuote && isBlockedCommentQuote(comment)) {
                 comment.classList.add('blocked-user-comment-quote');
                 comment.style.display = (showAll || showBlocked || !hideBlockedCommentQuote) ? '' : 'none';
-                return;
-            }
-
-            if (isFilteredComment(comment)) {
+                reason = 'comment quoting blocked user';
+            } else if (isFilteredComment(comment)) {
                 comment.classList.add('filtered-regex-comment');
-                comment.style.display = (showAll) ? '' : 'none';
-                return;
+                comment.style.display = showAll ? '' : 'none';
+                const commentText = comment.querySelector('.commentthread_comment_text');
+                const textClone = commentText?.cloneNode(true);
+                textClone?.querySelectorAll('blockquote')?.forEach(bq => bq.remove());
+                const cleanedText = textClone?.textContent.trim() || '';
+
+                if (!cleanedText) return false;
+                const { regexMatches } = isRegex(cleanedText, regexFiltersComments);
+                reason = regexMatches.length
+                    ? `filtered by regex: ${regexMatches.join(', ')}`
+                    : 'filtered by regex';
+            } else {
+                comment.style.display = '';
             }
 
-            comment.style.display = '';
+            const commentId = comment.id || comment.dataset.commentid || comment.dataset.id;
+            if (devMode && commentId && !loggedComments.has(commentId)) {
+                const rawText = comment.textContent || '';
+                const isRegexMatch = comment.classList.contains('filtered-regex-comment');
+
+                let reason = '';
+                if (!isRegexMatch) {
+                    if (isBlockedComment(comment)) {
+                        reason = 'comment by blocked user';
+                    } else if (hideBlockedCommentQuote && isBlockedCommentQuote(comment)) {
+                        reason = 'comment quoting blocked user';
+                    }
+                }
+
+                logCommentInfo(rawText, isRegexMatch, comment, reason);
+                loggedComments.add(commentId);
+            }
         });
 
         initCounts();
+
+        if (isDiscussion && devLogGroupOpen) {
+            console.groupEnd();
+            devLogGroupOpen = false;
+        }
     }
 
     function filterOP(showAll = devMode, showBlocked = false) {
@@ -1067,6 +1088,54 @@
         return lines;
     }
 
+    function extractCommentText(commentTextElem) {
+        if (!commentTextElem) return { quotes: [], comment: '[No content]' };
+
+        const clone = commentTextElem.cloneNode(true);
+        const quotes = [];
+
+        clone.querySelectorAll('br').forEach(br => br.replaceWith(document.createTextNode('\n')));
+
+        const blockquotes = Array.from(clone.querySelectorAll('blockquote')).reverse();
+
+        for (const bq of blockquotes) {
+
+            bq.querySelectorAll('br').forEach(br => br.replaceWith(document.createTextNode('\n')));
+
+            const quoteAuthorDiv = bq.querySelector('.bb_quoteauthor');
+            if (quoteAuthorDiv) {
+                quoteAuthorDiv.appendChild(document.createTextNode('\n'));
+            }
+
+            bq.innerHTML = bq.innerHTML.replace(/([^:\s]):(?!\s)/g, '$1:');
+
+            const fullText = bq.textContent.replace(/\n{2,}/g, '\n').trim();
+
+            const lines = fullText.split('\n');
+            let header = '', body = '';
+
+            if (lines[0]?.includes(':')) {
+                header = lines[0].trim();
+                body = lines.slice(1).join('\n').trim();
+            } else {
+                body = fullText;
+            }
+
+            const quotedIdMatch = bq.querySelector('a[href^="#c"]')?.getAttribute('href')?.match(/^#c(\d+)/);
+            const quotedId = quotedIdMatch?.[1] || null;
+
+            if (header || body) {
+                quotes.push({ header, body, quotedId });
+            }
+
+            bq.remove();
+        }
+
+
+        const comment = clone.textContent.replace(/\n{2,}/g, '\n').trim();
+        return { quotes, comment };
+    }
+
     function getForumLocationInfo() {
         let forumType = null;
         let subForum = null;
@@ -1102,6 +1171,14 @@
         .join(' - ') || 'Unknown Forum Location';
 
         return locationInfo;
+    }
+
+    function devLogGroupStart(locationInfo) {
+        if (devMode && !loggedLocations.has(locationInfo)) {
+            console.groupCollapsed(`%cDev Log @ [${locationInfo}]`, 'color: gray;');
+            devLogGroupOpen = true;
+            loggedLocations.add(locationInfo);
+        }
     }
 
     function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
@@ -1156,8 +1233,8 @@
 
         const tradeKeys = ['intent', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
         const hasTradeMatches = tradeKeys.some(key =>
-                                               (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
-                                              );
+            (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
+        );
 
         if (hasTradeMatches) {
             const scoreColor = score >= 3 ? logStyles.trade : logStyles.default;
@@ -1233,6 +1310,101 @@
         console.groupEnd();
     }
 
+    function logCommentInfo(raw, isRegexMatch, commentElem, reason = '') {
+        const number = commentElem.querySelector('.forum_comment_permlink a')?.textContent.trim() || '??';
+        const authorBdi = commentElem.querySelector('.commentthread_author_link bdi');
+        const baseName = authorBdi?.childNodes[0]?.textContent?.trim() || 'Unknown';
+        const nickname = authorBdi?.querySelector('.nickname_name')?.textContent?.trim();
+        const authorName = nickname ? `${baseName} (${nickname})` : baseName;
+
+        let extra = '';
+        let extraStyle = logStyles.label;
+
+        if (isRegexMatch) {
+            const matches = [];
+
+            for (const [description, pattern] of regexLanguage) {
+                const match = raw.match(pattern);
+                if (match) {
+                    matches.push(`language: ${match[0]} // ${description}`);
+                    break;
+                }
+            }
+            for (const [description, pattern] of regexSpam) {
+                const match = raw.match(pattern);
+                if (match) {
+                    matches.push(`spam: ${match[0]} // ${description}`);
+                    break;
+                }
+            }
+            for (const [description, pattern] of regexTrade) {
+                const match = raw.match(pattern);
+                if (match) {
+                    matches.push(`trade: ${match[0]} // ${description}`);
+                    break;
+                }
+            }
+
+            extra = matches.length ? `[Regex] ${matches.join(', ')}` : `[Regex]`;
+            extraStyle = logStyles.regex;
+
+        } else if (isBlockedComment(commentElem)) {
+            extra = 'comment by blocked user';
+            extraStyle = logStyles.blocked;
+
+        } else if (hideBlockedCommentQuote && isBlockedCommentQuote(commentElem)) {
+            extra = 'comment quoting blocked user';
+            extraStyle = logStyles.quoted;
+        }
+
+        const commentTextElem = commentElem.querySelector('.commentthread_comment_text');
+        const { quotes, comment } = extractCommentText(commentTextElem);
+
+        const hasExtra = Boolean(extra);
+        const groupFormat = hasExtra
+            ? `%c${number}%c - %c${authorName}%c - %c${extra}`
+            : `%c${number}%c - %c${authorName}`;
+        const groupArgs = hasExtra
+            ? [groupFormat, extraStyle, logStyles.label, extraStyle, logStyles.label, extraStyle]
+            : [groupFormat, extraStyle, logStyles.label, extraStyle];
+
+        console.groupCollapsed(...groupArgs);
+
+        const blockedCommentIds = new Set(
+            Array.from(document.querySelectorAll('.commentthread_deleted_expanded[id^="comment_"]'))
+                .map(el => el.id.replace('comment_', ''))
+        );
+
+        for (const { header, body, quotedId } of quotes) {
+            const isBlockedQuote = quotedId && blockedCommentIds.has(quotedId);
+
+            const quoteStyle = isBlockedQuote
+                ? `${logStyles.quoted} font-style: italic; padding: 2px 6px; border-left: 3px solid #ccc; margin: 4px 0; white-space: pre-wrap;`
+                : `font-style: italic; padding: 2px 6px; border-left: 3px solid #ccc; margin: 4px 0; white-space: pre-wrap;`;
+
+            const cleanedBody = body.replace(/\n{3,}/g, '\n\n');
+
+            let quoteBlock;
+            if (header) {
+
+                quoteBlock = header.endsWith(':')
+                    ? `> ${header}\n${cleanedBody}`
+                    : `> ${header}:\n${cleanedBody}`;
+            } else {
+                quoteBlock = `> ${cleanedBody}`;
+            }
+
+            console.log(`%c${quoteBlock}`, quoteStyle);
+        }
+
+        const formattedComment = comment.replace(/\n{3,}/g, '\n\n');
+        const isProblematic = isBlockedComment(commentElem) || isFilteredComment(commentElem);
+        const commentStyle = isProblematic ? `${extraStyle} white-space: pre-wrap;` : 'white-space: pre-wrap;';
+        console.log(`%c${formattedComment}`, commentStyle);
+
+        console.groupEnd();
+    }
+
     function logScriptBanner() {
         const parts = [
             { text: 'Steamcommunity', style: 'color: white; background: black;' },
@@ -1304,7 +1476,7 @@
         return parts.join(', ');
     }
 
-    function displayCount(blockedCount, blockedQuoteCount, filteredCount ) {
+    function displayCount(blockedCount, blockedQuoteCount, filteredCount) {
         const pagingSummaries = document.querySelectorAll('.forum_paging_summary.ellipsis');
 
         pagingSummaries.forEach(pagingSummary => {
@@ -1406,9 +1578,9 @@
     function updateDashSeparators(summaryDivs, shouldShowDash) {
         summaryDivs.forEach(summary => {
             const existingDash = summary.querySelector('.dash') ||
-                  [...summary.childNodes].find(
-                      node => node.nodeType === 3 && node.nodeValue.trim() === '-'
-                  );
+                [...summary.childNodes].find(
+                    node => node.nodeType === 3 && node.nodeValue.trim() === '-'
+                );
 
             if (shouldShowDash && !existingDash) {
                 const dashSpan = document.createElement('span');
