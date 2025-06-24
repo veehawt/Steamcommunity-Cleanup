@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.39
+// @version      0.4.40
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -285,7 +285,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.39';
+    const SCRIPT_VERSION = '0.4.40';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -293,6 +293,7 @@
     let devLogGroupOpen = false;
 
     const isTradingForum = window.location.href.includes('/tradingforum/');
+    const isProfileContainer = document.querySelector('.profile_page');
     const isTopicsContainer = document.querySelector('.forum_topics_container');
     const isCommentsContainer = document.querySelector('.commentthread_comment_container');
     const isGeneralForum = !!isTopicsContainer;
@@ -988,7 +989,7 @@
 
         const nicknameTooltip = document.createElement("a");
         nicknameTooltip.className = "forum_comment_action nickname tooltip";
-        nicknameTooltip.href = `https://steamcommunity.com/profiles/${userId}#addnickname`;
+        nicknameTooltip.href = `https://steamcommunity.com/profiles/${userId}/#addnickname`;
         nicknameTooltip.target = "_blank";
         nicknameTooltip.innerHTML = `
         <img class="nickname-icon" src="https://community.fastly.steamstatic.com/public/images/skin_1/notification_icon_edit_bright.png">
@@ -1884,28 +1885,66 @@
         });
     }
 
-    createObserver({
-        target: isTopicsContainer || isCommentsContainer,
-        config: { childList: true, subtree: true },
-        onMutation: (mutations) => {
-            let topicsChanged = false;
-            let commentsChanged = false;
-
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.classList?.contains("forum_topic")) topicsChanged = true;
-                    if (node.classList?.contains("commentthread_comment") || node.classList?.contains("commentthread_deleted_expanded")) commentsChanged = true;
-                    if (node.classList?.contains("forum_comment_action_menu")) addNickname(node);
+    if (isProfileContainer) {
+        createObserver({
+            target: isProfileContainer,
+            config: { childList: true, subtree: true },
+            onMutation: (mutations) => {
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.classList?.contains("forum_comment_action_menu")) {
+                            addNickname(node);
+                        }
+                    });
                 });
-            });
-
-            if (topicsChanged || commentsChanged) {
-                runFilters();
-                getForumLocationInfo();
             }
-            setVisibleCount();
-        }
-    });
+        });
+    }
+
+    if (isTopicsContainer) {
+        createObserver({
+            target: isTopicsContainer,
+            config: { childList: true, subtree: true },
+            onMutation: (mutations) => {
+                let topicsChanged = false;
+
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.classList?.contains("forum_topic")) topicsChanged = true;
+                    });
+                });
+
+                if (topicsChanged) {
+                    runFilters();
+                    getForumLocationInfo();
+                    setVisibleCount();
+                }
+            }
+        });
+    }
+
+    if (isCommentsContainer) {
+        createObserver({
+            target: isCommentsContainer,
+            config: { childList: true, subtree: true },
+            onMutation: (mutations) => {
+                let commentsChanged = false;
+
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.classList?.contains("commentthread_comment") || node.classList?.contains("commentthread_deleted_expanded")) commentsChanged = true;
+                        if (node.classList?.contains("forum_comment_action_menu")) addNickname(node);
+                    });
+                });
+
+                if (commentsChanged) {
+                    runFilters();
+                    getForumLocationInfo();
+                    setVisibleCount();
+                }
+            }
+        });
+    }
 
     createObserver({
         target: document.body,
