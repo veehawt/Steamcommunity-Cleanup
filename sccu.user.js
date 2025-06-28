@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.41
+// @version      0.4.42
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -19,10 +19,11 @@
 (function() {
     'use strict';
 
-    // Hide comments quoting blocked users (options: true/false, default: false)
+    // Hide comments quoting blocked users
+    // Default: false
     const hideBlockedCommentQuote = false;
 
-    // Keywords in topic titles to hide
+    // Keywords to filter from topic titles
     const keywords = [
         //"hack", // Add your keywords here
         //"cheat",
@@ -30,7 +31,8 @@
         //"noob",
     ];
 
-    // Regex language patterns in topic titles and topic comments to hide (disabled on trade forums)
+    // List of regex-based language patterns to filter from topic titles and comments
+    // Note: Language filtering is always disabled in trading forums
     const regexLanguage = [
         //["English and the basic Latin alphabet",                               /[A-Za-z]+/],
         ["Cyrillic (Russian, Ukrainian, Bulgarian, Serbian etc.)",              /[\u0400-\u04FF]/],
@@ -50,12 +52,14 @@
         ["Nordic (Danish, Finnish, Icelandic, Norwegian, Swedish)",             /[ÆæØøÅåÞþÐð]/],
     ];
 
+    // List of regex-based spam patterns to filter from topic titles and comments
     const regexSpam = [
         ["+rep for rep",        /\b[\+\-]?\s*rep\b(?:\s*(?:for\s*[\+\-]?\s*rep|me|pls|plz|plx|please|4\s*(?:me|u|[\+\-]?\s*rep)))?|\bgive\s+[\+\-]?\s*rep\b/i],
         ["comment for comment", /\bcomment\s*(?:for|4)?\s*comment\b/i],
     ];
 
-    // Regex trade patterns in topic titles to hide (disabled on trade forums)
+    // List of regex-based trade patterns to filter from topic titles
+    // Note: Trade-related filtering is always disabled in trading forums
     const regexTrade = [
         ["free points",                              /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bp\s*o+\s*i\s*n\s*t\s*s\b))[^\w\s]*\b/i],
         ["free skins",                               /\b[^\w\s]*(?:f\s*r\s*e\s*e\s*(?:\bs\s*k(?:i|\|)n\s*s\b))[^\w\s]*\b/i],
@@ -70,7 +74,8 @@
     ];
 
 
-    // Refined Regex trade patterns in topic titles to hide (disabled on trade forums)
+    // List of refined regex-based trade intent patterns used to estimate trade confidence score from topic titles
+    // Note: Trade-related filtering is always disabled in trading forums
     const regexTradeIntent = new RegExp(String.raw`\b(
         |buy(ing)?|capsules?|case(s)?(?![\s-]*hard(?:ened|end))|crates?|check(?: my)? (?:inv+|inventory)|downgrades?|upgrades?|fast trade(s|z)?|fair\s+(trade(s|z)?|deal(s|z)?)|
         |fast response|for trade|full loadout|give me|have|want|in stock|invent(ory)?|inv+|kato(wice)?|knife for knife|
@@ -288,7 +293,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.41';
+    const SCRIPT_VERSION = '0.4.42';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -372,7 +377,7 @@
             .toLowerCase()
             .normalize("NFKD") // strip accents and diacritics
             .replace(/[^\p{ASCII}]/gu, ' ') // replace all non-ASCII characters (emojis, special symbols, etc.)
-            .replace(/[^\p{L}\p{N}\s\-\.?]/gu, ' ') // replace everything but letters, numbers, spaces, hypens, periods and question marks
+            .replace(/[^\p{L}\p{N}\s\-\.,?]/gu, ' ') // replace everything but letters, numbers, spaces, hypens, periods, commas and question marks
             .replace(/\s+/g, ' ') // collapse whitespaces
             .trim()
     }
@@ -642,9 +647,13 @@
             if (key === 'float') {
                 matches = matches.filter((match) => {
                     const idx = normalized.indexOf(match);
-                    const before = normalized.slice(Math.max(0, idx - 3), idx);
-                    const after = normalized.slice(idx + match.length, idx + match.length + 3);
-                    return !/[\d]\.[\d]/.test(before + match + after);
+                    const before = normalized.slice(Math.max(0, idx - 6), idx);
+                    const after = normalized.slice(idx + match.length, idx + match.length + 6);
+
+                    const datePatternBefore = /\b\d{1,2}\.\d{1,2}$/.test(before);
+                    const datePatternAfter = /^\d{1,2}\.\d{2,4}\b/.test(after);
+
+                    return !(datePatternBefore || datePatternAfter);
                 });
                 matchedByKey[key] = matches;
             }
@@ -675,9 +684,23 @@
             let groupScore = 0;
 
             if (key === 'negatives') {
-                let hasQuestion = false;
+                // Remove matches that are part of a known trade link
+                matches = matches.filter(match => {
+                    const index = normalized.indexOf(match);
+                    const slice = normalized.slice(Math.max(0, index - 60), index + 60);
+                    return !/https steamcommunity\.com tradeoffer new/i.test(slice);
+                });
 
-                if (normalized.includes('?') && !matches.includes('?')) {
+                // Then check for '?' only if it is NOT inside the trade link
+                const questionMatches = [...normalized.matchAll(/\?/g)].map(m => m[0]);
+                const questionInTradeLink = questionMatches.some((qm, i) => {
+                    const idx = normalized.indexOf(qm);
+                    const slice = normalized.slice(Math.max(0, idx - 60), idx + 60);
+                    return /https steamcommunity\.com tradeoffer new/i.test(slice);
+                });
+
+                let hasQuestion = false;
+                if (normalized.includes('?') && !matches.includes('?') && !questionInTradeLink) {
                     hasQuestion = true;
                     matches.push('?');
                     exactCount++;
