@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.45
+// @version      0.4.46
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -298,7 +298,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.45';
+    const SCRIPT_VERSION = '0.4.46';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -1682,7 +1682,7 @@
     }
 
     function getPageStartIndex(span) {
-        const text = span.textContent.trim().replace('.', '');
+        const text = span.textContent.trim().replace(/[.,]/g, '');
         return parseInt(text, 10) || 1;
     }
 
