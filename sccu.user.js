@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.43
+// @version      0.4.44
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -298,7 +298,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.43';
+    const SCRIPT_VERSION = '0.4.44';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -757,6 +757,8 @@
 
 
     function isBlockedTopic(topic) {
+        if (!isGeneralForum) return false;
+
         const title = topic.querySelector('.forum_topic_name.op_hidden');
         if (!title) return false;
 
@@ -772,10 +774,13 @@
     }
 
     function isBlockedComment(comment) {
+        if (!isDiscussion) return false;
+
         return comment.classList.contains('commentthread_deleted_expanded');
     }
 
     function isBlockedCommentQuote(comment) {
+        if (!hideBlockedCommentQuote) return false;
         if (!isDiscussion) return false;
 
         const commentText = comment.querySelector('.commentthread_comment_text');
@@ -798,6 +803,8 @@
     }
 
     function isFilteredComment(comment) {
+        if (!isDiscussion) return false;
+
         if (isBlockedComment(comment)) return false;
 
         const commentText = comment.querySelector('.commentthread_comment_text');
