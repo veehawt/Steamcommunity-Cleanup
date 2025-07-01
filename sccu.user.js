@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.46
+// @version      0.4.47
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -298,7 +298,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.46';
+    const SCRIPT_VERSION = '0.4.47';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -812,6 +812,8 @@
 
         const textClone = commentText.cloneNode(true);
         textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
+        textClone.querySelectorAll('.btn_darkblue_white_innerfade').forEach(el => el.remove());
+        textClone.querySelectorAll('.dynamiclink_box').forEach(el => el.remove());
 
         const cleanedText = textClone.textContent.trim();
         if (!cleanedText) return false;
