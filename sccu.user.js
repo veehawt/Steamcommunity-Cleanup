@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.44
+// @version      0.4.45
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -298,7 +298,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.44';
+    const SCRIPT_VERSION = '0.4.45';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -641,9 +641,9 @@
         const globalUsedFuzzyTokens = new Set();
         const fuzzyStopwords = new Set(['block']);
         const allowedTerms = new Set([
-            ...fuzzyRegexTermsByKey.intent.map(t => t.text),
-            ...fuzzyRegexTermsByKey.weapons.map(t => t.text),
-            ...fuzzyRegexTermsByKey.finishes.map(t => t.text),
+            ...(fuzzyRegexTermsByKey.intent || []).map(t => t.text),
+            ...(fuzzyRegexTermsByKey.weapons || []).map(t => t.text),
+            ...(fuzzyRegexTermsByKey.finishes || []).map(t => t.text),
         ]);
 
         for (const [key, regex] of Object.entries(regexTradeTests)) {
