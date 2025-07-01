@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.47
+// @version      0.4.48
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -10,6 +10,7 @@
 // @match        https://steamcommunity.com/*/*/discussions/*
 // @match        https://steamcommunity.com/app/*/tradingforum/*
 // @match        https://steamcommunity.com/app/*/eventcomments/*
+// @match        https://steamcommunity.com/workshop/discussions/*
 // @match        https://steamcommunity.com/discussions/forum/*
 // @match        https://steamcommunity.com/profiles/*
 // @match        https://steamcommunity.com/id/*
@@ -298,7 +299,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.47';
+    const SCRIPT_VERSION = '0.4.48';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
