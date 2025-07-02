@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.48
+// @version      0.4.49
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -23,6 +23,11 @@
     // Hide comments quoting blocked users
     // Default: false
     const hideBlockedCommentQuote = false;
+
+    // Hide topics with trade-related intent in their titles
+    // Note: Trade-related filtering is always disabled in trading forums, regardless of this setting
+    // Default: true
+    const hideTradeRelatedTopics = true;
 
     // Keywords to filter from topic titles
     const keywords = [
@@ -46,7 +51,7 @@
         ["Japanese",                                                            /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/],
         ["Vietnamese",                                                          /[ảạằắẳẵặỉĩịỏọồốổỗộờớởỡợủũụưừứửữựỷỹỵđ]/i],
         ["Greek",                                                               /[\u0370-\u03FF]/],
-        ["Turkish",                                                             /[ğşşçıİĞŞÇ]/],
+        ["Turkish",                                                             /[ğşçıİĞŞÇ\u0130\u0307]/],
         ["Turkish, German, Estonian, Finnish, Hungarian (shared diacritics)",   /[ÄäÖöÜü]/],
         ["Hungarian",                                                           /[ŐőŰű]/],
         ["Polish",                                                              /[Łł]/],
@@ -294,12 +299,13 @@
         keyword: 'color: #d3a588;',
         regex: 'color: #773d61;',
         trade: 'color: #2ca58d;',
+        regextrade: 'color: #d17842',
         blocked: 'color: #d4545f;',
         quoted: 'color: #d48754;'
     };
 
 
-    const SCRIPT_VERSION = '0.4.48';
+    const SCRIPT_VERSION = '0.4.49';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -314,12 +320,6 @@
     const isDiscussion = !!isCommentsContainer;
 
 
-    let regexFiltersTopics;
-    if (isTradingForum && !devMode) {
-        regexFiltersTopics = [regexSpam];
-    } else {
-        regexFiltersTopics = [...regexLanguage, ...regexSpam, ...regexTrade];
-    }
 
     let regexFiltersComments;
     if (isTradingForum) {
@@ -567,16 +567,16 @@
     }
 
     function isRegex(text, regexList) {
-        const regexMatches = regexList
-            .map(entry => {
-                const regex = Array.isArray(entry) ? entry[1] : entry;
-                return regex instanceof RegExp && regex.test(text) ? regex.toString() : null;
+        const matches = regexList
+            .map(([description, regex]) => {
+                const match = text.match(regex);
+                return match ? { match: match[0], description } : null;
             })
             .filter(Boolean);
 
         return {
-            isMatch: regexMatches.length > 0,
-            regexMatches
+            isMatch: matches.length > 0,
+            regexMatches: matches,
         };
     }
 
@@ -601,7 +601,7 @@
         };
     }
 
-    function isTradeRelated(content, topic = null, isRegexMatch = false, keywordMatches = [], skipFuzzy = false) {
+    function isTradeRelated(content, topic = null, regexMatches = {}, keywordMatches = [], skipFuzzy = false) {
         if (isTradingForum && !devMode) return false;
 
         const cacheKey = `${content}::${skipFuzzy ? 'nofuzzy' : 'full'}`;
@@ -616,7 +616,9 @@
             output = getDebugResult({
                 ...result,
                 raw: normalizeRaw(content),
-                isRegexMatch,
+                regexLanguageMatch: regexMatches.regexLanguageMatch,
+                regexSpamMatch: regexMatches.regexSpamMatch,
+                regexTradeMatch: regexMatches.regexTradeMatch,
                 keywordMatches,
                 topic,
                 skipFuzzy
@@ -703,6 +705,7 @@
                 matches = matches.filter(match => {
                     const index = normalized.indexOf(match);
                     const slice = normalized.slice(Math.max(0, index - 60), index + 60);
+                    // Exclude matches inside the trade link
                     return !/https steamcommunity\.com tradeoffer new/i.test(slice);
                 });
 
@@ -756,6 +759,25 @@
         return 'very likely';
     }
 
+    function shouldCheckLanguage() {
+        return !isTradingForum || devMode;
+    }
+
+    function shouldCheckTrade() {
+        return hideTradeRelatedTopics && (!isTradingForum || devMode);
+    }
+
+    function matchRegexGroup(text, group) {
+        return group.some(([_, pattern]) => pattern.test(text));
+    }
+
+    function getRegexMatches(text) {
+        return {
+            regexLanguageMatch: shouldCheckLanguage() && matchRegexGroup(text, regexLanguage),
+            regexSpamMatch: matchRegexGroup(text, regexSpam),
+            regexTradeMatch: shouldCheckTrade() && matchRegexGroup(text, regexTrade),
+        };
+    }
 
     function isBlockedTopic(topic) {
         if (!isGeneralForum) return false;
@@ -831,19 +853,44 @@
 
         const text = topicName.textContent.trim();
 
-        const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(text, keywords);
-        const { isMatch: isRegexMatch } = isRegex(text, regexFiltersTopics);
+        const { regexLanguageMatch, regexSpamMatch, regexTradeMatch } = getRegexMatches(text);
 
-        const tradeResult = isTradeRelated(text, topic, isRegexMatch, keywordMatches, includeLogs);
+        const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(text, keywords);
+
+        const isRegexMatch = regexLanguageMatch || regexSpamMatch || regexTradeMatch;
+
+        const tradeResult = isTradeRelated(
+            text,
+            topic,
+            {
+                regexLanguageMatch,
+                regexSpamMatch,
+                regexTradeMatch
+            },
+            keywordMatches,
+            includeLogs
+        );
+
         const isTrade = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
 
         topic.dataset.tradeMatch = isTrade;
         topic.dataset.regexMatch = isRegexMatch;
+        topic.dataset.regexLanguageMatch = regexLanguageMatch;
+        topic.dataset.regexSpamMatch = regexSpamMatch;
+        topic.dataset.regexTradeMatch = regexTradeMatch;
 
-        applyTopicClasses(topic, isKeywordMatch, isRegexMatch, isTrade, showAll);
+        applyTopicClasses(
+            topic,
+            isKeywordMatch,
+            regexLanguageMatch,
+            regexSpamMatch,
+            regexTradeMatch,
+            isTrade,
+            showAll
+        );
     }
 
-    function applyTopicClasses(topic, keywordMatch, regexMatch, tradeMatch, showAll) {
+    function applyTopicClasses(topic, keywordMatch, regexLanguageMatch, regexSpamMatch, regexTradeMatch, tradeMatch, showAll) {
         topic.classList.remove(
             'filtered-keywords',
             'filtered-regex',
@@ -851,15 +898,19 @@
             'filtered-regex-trade-related'
         );
 
-        const isFiltered = keywordMatch || regexMatch || tradeMatch;
+        const isTradeIntentFilteringEnabled = hideTradeRelatedTopics ? tradeMatch : false;
+        const isTradeRegexFilteringEnabled = hideTradeRelatedTopics ? regexTradeMatch : false;
 
+        const isFiltered = keywordMatch || regexLanguageMatch || regexSpamMatch || isTradeRegexFilteringEnabled || isTradeIntentFilteringEnabled;
 
         if (devMode) {
-            if (regexMatch && tradeMatch) {
+            if (isTradeRegexFilteringEnabled && isTradeIntentFilteringEnabled) {
                 topic.classList.add('filtered-regex-trade-related');
-            } else if (regexMatch) {
+            } else if (isTradeRegexFilteringEnabled) {
                 topic.classList.add('filtered-regex');
-            } else if (tradeMatch) {
+            } else if (regexLanguageMatch || regexSpamMatch) {
+                topic.classList.add('filtered-regex');
+            } else if (isTradeIntentFilteringEnabled) {
                 topic.classList.add('filtered-trade-related');
             }
 
@@ -1064,10 +1115,13 @@
         scoreByKey: breakdown,
         matchedByKey,
         fuzzyMatchByKey,
-        isRegexMatch,
+        regexLanguageMatch,
+        regexSpamMatch,
+        regexTradeMatch,
         keywordMatches,
         skipFuzzy
     }) {
+        const isRegexMatch = regexLanguageMatch || regexSpamMatch || regexTradeMatch;
         const debugInfo = {
             raw,
             normalized,
@@ -1078,6 +1132,9 @@
             matchedByKey,
             fuzzyMatchByKey,
             isRegexMatch,
+            regexLanguageMatch,
+            regexSpamMatch,
+            regexTradeMatch,
             isKeywordMatch: keywordMatches?.length > 0,
             keywordMatches,
         };
@@ -1094,9 +1151,21 @@
         return debugInfo;
     }
 
-    function buildTopicLabel({ raw, isKeywordMatch, isRegexMatch, isTrade, hasFuzzyMatches }) {
+    function buildTopicLabel({
+        raw,
+        isKeywordMatch,
+        regexLanguageMatch,
+        regexSpamMatch,
+        regexTradeMatch,
+        isTrade,
+        hasFuzzyMatches,
+        isTradeFilteringEnabled,
+    }) {
+
         let label = `"${raw}"`;
         const coreTags = [];
+
+        const isRegexMatch = regexLanguageMatch || regexSpamMatch || regexTradeMatch;
 
         if (isKeywordMatch) coreTags.push('Keyword');
         if (isRegexMatch) coreTags.push('Regex');
@@ -1112,14 +1181,23 @@
         }
 
         let groupStyleMain = logStyles.label;
-        if (isTrade && isRegexMatch) {
-            groupStyleMain = 'color: #d17842; font-weight: bold;';
-        } else if (isTrade) {
-            groupStyleMain = logStyles.trade;
-        } else if (isRegexMatch) {
-            groupStyleMain = logStyles.regex;
-        } else if (isKeywordMatch) {
-            groupStyleMain = logStyles.keyword;
+
+        if (isTradeFilteringEnabled) {
+            if (isTrade && isRegexMatch) {
+                groupStyleMain = logStyles.regextrade;
+            } else if (isTrade) {
+                groupStyleMain = logStyles.trade;
+            } else if (isRegexMatch) {
+                groupStyleMain = logStyles.regex;
+            } else if (isKeywordMatch) {
+                groupStyleMain = logStyles.keyword;
+            }
+        } else {
+            if ((regexLanguageMatch || regexSpamMatch) && !regexTradeMatch) {
+                groupStyleMain = logStyles.regex;
+            } else if (isKeywordMatch) {
+                groupStyleMain = logStyles.keyword;
+            }
         }
 
         styleArgs.push(groupStyleMain);
@@ -1149,15 +1227,29 @@
         return { label, styleArgs };
     }
 
-    function getTopicDetailLines({ keywordMatches, raw, matchedByKey, fuzzyMatchByKey, scoreByKey }) {
+    function getTopicDetailLines({ keywordMatches, raw, matchedByKey, fuzzyMatchByKey, scoreByKey, enableTradeRelatedFiltering }) {
         const lines = [];
 
         lines.push(...logKeywordMatches(keywordMatches));
-        lines.push(...logRegexMatches(raw));
+        lines.push(...logRegexMatches(raw, enableTradeRelatedFiltering));
         lines.push(...logTradeMatches(matchedByKey, scoreByKey));
         lines.push(...logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey));
 
         return lines;
+    }
+
+    function getFilteringWarnings({ isTrade, regexTradeMatch, isTradeFilteringEnabled }) {
+        const warnings = [];
+
+        if (!isTradeFilteringEnabled && (regexTradeMatch || isTrade)) {
+            const combinedText = `%c[info] Trade match detected but filtering skipped (enableTradeRelatedFiltering = false)`;
+            warnings.push({
+                text: combinedText,
+                styles: [logStyles.info]
+            });
+        }
+
+        return warnings;
     }
 
     function logKeywordMatches(keywordMatches) {
@@ -1171,6 +1263,7 @@
 
     function logRegexMatches(raw) {
         const lines = [];
+
         for (const [description, pattern] of regexLanguage) {
             const match = raw.match(pattern);
             if (match) {
@@ -1178,6 +1271,7 @@
                 break;
             }
         }
+
         for (const [description, pattern] of regexSpam) {
             const match = raw.match(pattern);
             if (match) {
@@ -1185,6 +1279,7 @@
                 break;
             }
         }
+
         for (const [description, pattern] of regexTrade) {
             const match = raw.match(pattern);
             if (match) {
@@ -1192,6 +1287,7 @@
                 break;
             }
         }
+
         return lines;
     }
 
@@ -1232,7 +1328,9 @@
             raw,
             normalized,
             isTrade,
-            isRegexMatch,
+            regexLanguageMatch,
+            regexSpamMatch,
+            regexTradeMatch,
             matchedByKey = {},
             fuzzyMatchByKey = {},
             score = 0,
@@ -1242,15 +1340,32 @@
         } = params;
 
         const isKeywordMatch = keywordMatches?.length > 0;
-        const hasFuzzyMatches = Object.values(fuzzyMatchByKey || {}).some(arr => arr.length > 0);
+        const isRegexMatch = regexLanguageMatch || regexSpamMatch || regexTradeMatch;
+        const hasFuzzyMatches = Object.values(fuzzyMatchByKey).some(arr => arr.length > 0);
 
-        const { label, styleArgs } = buildTopicLabel({ raw, isKeywordMatch, isRegexMatch, isTrade, hasFuzzyMatches });
+        const { label, styleArgs } = buildTopicLabel({
+            raw,
+            isKeywordMatch,
+            regexLanguageMatch,
+            regexSpamMatch,
+            regexTradeMatch,
+            isTrade,
+            hasFuzzyMatches,
+            isTradeFilteringEnabled: hideTradeRelatedTopics
+        });
 
-        const lines = getTopicDetailLines({ keywordMatches, raw, matchedByKey, fuzzyMatchByKey, scoreByKey });
+        const lines = getTopicDetailLines({
+            keywordMatches,
+            raw,
+            matchedByKey,
+            fuzzyMatchByKey,
+            scoreByKey,
+            enableTradeRelatedFiltering: hideTradeRelatedTopics
+        });
 
         const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
-        const hasTradeMatches = tradeKeys.some(key =>
-            (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
+        const hasTradeMatches = tradeKeys.some(
+            key => (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
         );
 
         if (hasTradeMatches) {
@@ -1270,6 +1385,16 @@
             ["isRegex", isRegexMatch, isRegexMatch && 'regex'],
             ["isTrade", isTrade, isTrade && 'trade']
         ]);
+
+        const filteringWarnings = getFilteringWarnings({
+            isTrade,
+            regexTradeMatch,
+            isTradeFilteringEnabled: hideTradeRelatedTopics
+        });
+
+        for (const warning of filteringWarnings) {
+            console.log(warning.text, ...warning.styles);
+        }
 
         for (const line of lines) {
             console.log(line.text, ...line.styles);
@@ -1416,6 +1541,7 @@
 
     function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
         let baseStyle;
+
         if (overrideStyle) {
             baseStyle = overrideStyle;
         } else if (matches.length) {
