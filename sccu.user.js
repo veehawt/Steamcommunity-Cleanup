@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.49
+// @version      0.4.50
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -28,6 +28,10 @@
     // Note: Trade-related filtering is always disabled in trading forums, regardless of this setting
     // Default: true
     const hideTradeRelatedTopics = true;
+
+    // Enable Counter-Strike 2 specific regexes (weapons, finishes, wear, float, stattrak) in other Steam forums
+    // Default: false
+    const enableCS2SpecificRegexGlobally = false;
 
     // Keywords to filter from topic titles
     const keywords = [
@@ -305,13 +309,16 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.49';
+    const SCRIPT_VERSION = '0.4.50';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
     const loggedLocations = new Set();
     let devLogGroupOpen = false;
 
+    const isCS2Forum =
+        window.location.href.includes("/app/730/") ||
+        window.location.href.includes("workshop/discussions") && window.location.href.includes("appid=730");
     const isTradingForum = window.location.href.includes('/tradingforum/');
     const isProfileContainer = document.querySelector('.profile_page');
     const isTopicsContainer = document.querySelector('.forum_topics_container');
@@ -327,6 +334,9 @@
     } else {
         regexFiltersComments = [...regexLanguage, ...regexSpam];
     }
+
+    const useCS2SpecificRegexGlobally = isCS2Forum || enableCS2SpecificRegexGlobally;
+    const cs2Keys = ['weapons', 'finishes', 'wear', 'float', 'stattrak'];
 
     const regexTradeTests = {
         negatives: regexTradeNegatives,
@@ -361,16 +371,28 @@
 
     const pendingDevLogs = new Map();
 
-    const patternWeights = {
-        intent: 4,
-        intentlight: 2,
-        weapons: 2,
-        finishes: 2,
-        wear: 3,
-        float: 3,
-        stattrak: 2,
-        negatives: -3
-    };
+    function getPatternWeights() {
+        const baseWeights = {
+            intent: 4,
+            intentlight: 2,
+            negatives: -3,
+            weapons: 2,
+            finishes: 2,
+            wear: 3,
+            float: 3,
+            stattrak: 2,
+        };
+
+        if (!useCS2SpecificRegexGlobally) {
+            baseWeights.weapons = 0;
+            baseWeights.finishes = 0;
+            baseWeights.wear = 0;
+            baseWeights.float = 0;
+            baseWeights.stattrak = 0;
+        }
+
+        return baseWeights;
+    }
 
 
     function normalizeRaw(raw) {
@@ -570,7 +592,7 @@
         const matches = regexList
             .map(([description, regex]) => {
                 const match = text.match(regex);
-                return match ? { match: match[0], description } : null;
+                return match ? `${description}: ${match[0]}` : null;
             })
             .filter(Boolean);
 
@@ -621,7 +643,8 @@
                 regexTradeMatch: regexMatches.regexTradeMatch,
                 keywordMatches,
                 topic,
-                skipFuzzy
+                skipFuzzy,
+                useCS2SpecificRegexGlobally
             });
         } else {
             output = result.isTrade;
@@ -633,6 +656,8 @@
 
 
     function getTradeConfidenceScore(normalized, skipFuzzy = false) {
+        const patternWeights = getPatternWeights();
+
         const scoreBreakdown = {};
         const matchedByKey = {};
         const fuzzyMatchByKey = {};
@@ -1119,7 +1144,8 @@
         regexSpamMatch,
         regexTradeMatch,
         keywordMatches,
-        skipFuzzy
+        skipFuzzy,
+        useCS2SpecificRegexGlobally
     }) {
         const isRegexMatch = regexLanguageMatch || regexSpamMatch || regexTradeMatch;
         const debugInfo = {
@@ -1137,6 +1163,7 @@
             regexTradeMatch,
             isKeywordMatch: keywordMatches?.length > 0,
             keywordMatches,
+            useCS2SpecificRegexGlobally
         };
 
         const cacheKey = normalized;
@@ -1227,13 +1254,13 @@
         return { label, styleArgs };
     }
 
-    function getTopicDetailLines({ keywordMatches, raw, matchedByKey, fuzzyMatchByKey, scoreByKey, enableTradeRelatedFiltering }) {
+    function getTopicDetailLines({ keywordMatches, raw, matchedByKey, fuzzyMatchByKey, scoreByKey, enableTradeRelatedFiltering, patternWeights, useCS2SpecificRegexGlobally }) {
         const lines = [];
 
         lines.push(...logKeywordMatches(keywordMatches));
         lines.push(...logRegexMatches(raw, enableTradeRelatedFiltering));
-        lines.push(...logTradeMatches(matchedByKey, scoreByKey));
-        lines.push(...logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey));
+        lines.push(...logTradeMatches(matchedByKey, scoreByKey, patternWeights, useCS2SpecificRegexGlobally));
+        lines.push(...logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey, patternWeights, useCS2SpecificRegexGlobally));
 
         return lines;
     }
@@ -1250,6 +1277,9 @@
         }
 
         return warnings;
+    }
+
+    function getDisabledRegexWarnings(patternWeights, useCS2SpecificRegexGlobally) {
     }
 
     function logKeywordMatches(keywordMatches) {
@@ -1291,32 +1321,43 @@
         return lines;
     }
 
-    function logTradeMatches(matchedByKey, scoreByKey) {
+    function logTradeMatches(matchedByKey, scoreByKey, patternWeights, useCS2SpecificRegexGlobally) {
         const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
         const lines = [];
 
+        const disabledNotes = getDisabledRegexWarnings(patternWeights, useCS2SpecificRegexGlobally);
+
         for (const key of tradeKeys) {
             const matches = matchedByKey[key] || [];
-            const weight = scoreByKey[key]?.groupScore ?? 0;
-            const isNegative = key === 'negatives';
-            if (matches.length) {
-                lines.push(renderMatchLine(key, matches, isNegative, weight));
-            }
+            if (matches.length === 0) continue;
+
+            const weight = scoreByKey[key]?.groupScore;
+            const isNegative = (key === 'negatives');
+            const note = disabledNotes.find(w => w.key === key)?.note || '';
+            const forceWeightDisplay = cs2Keys.includes(key);
+
+            lines.push(renderMatchLine(key, matches, isNegative, weight, null, note, forceWeightDisplay));
         }
 
         return lines;
     }
 
-    function logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey) {
+    function logFuzzyTradeMatches(fuzzyMatchByKey, scoreByKey, patternWeights, useCS2SpecificRegexGlobally) {
         const lines = [];
+
+        const disabledNotes = getDisabledRegexWarnings(patternWeights, useCS2SpecificRegexGlobally);
 
         if (fuzzyMatchByKey && typeof fuzzyMatchByKey === 'object') {
             for (const key of Object.keys(fuzzyMatchByKey)) {
                 const fuzzyMatches = fuzzyMatchByKey[key] || [];
-                const weight = scoreByKey[key]?.groupScore ?? 0;
-                if (fuzzyMatches.length) {
-                    lines.push(renderMatchLine(`${key} (fuzzy)`, fuzzyMatches, key === 'negatives', weight));
-                }
+                if (!fuzzyMatches.length) continue;
+
+                const groupScore = scoreByKey[key]?.groupScore;
+                const isNegative = key === 'negatives';
+                const note = disabledNotes.find(w => w.key === key)?.note || '';
+                const forceWeightDisplay = cs2Keys.includes(key);
+
+                lines.push(renderMatchLine(`${key} (fuzzy)`, fuzzyMatches, isNegative, groupScore, null, note, forceWeightDisplay));
             }
         }
 
@@ -1336,7 +1377,8 @@
             score = 0,
             scoreByKey = {},
             keywordMatches = [],
-            confidence
+            confidence,
+            useCS2SpecificRegexGlobally
         } = params;
 
         const isKeywordMatch = keywordMatches?.length > 0;
@@ -1360,7 +1402,8 @@
             matchedByKey,
             fuzzyMatchByKey,
             scoreByKey,
-            enableTradeRelatedFiltering: hideTradeRelatedTopics
+            enableTradeRelatedFiltering: hideTradeRelatedTopics,
+            useCS2SpecificRegexGlobally
         });
 
         const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
@@ -1539,7 +1582,7 @@
         console.groupEnd();
     }
 
-    function renderMatchLine(label, matches = [], isNegative = false, weightSum = 0, overrideStyle = null) {
+    function renderMatchLine(label, matches = [], isNegative = false, weightSum = undefined, overrideStyle = null, note = '', forceWeightDisplay = false) {
         let baseStyle;
 
         if (overrideStyle) {
@@ -1553,19 +1596,16 @@
         const matchText = matches.join(', ');
 
         let weightText = '';
-        if (weightSum) {
-            let weightDisplay;
-            if (isNegative) {
-                weightDisplay = `(-${Math.abs(weightSum)})`;
-            } else {
-                weightDisplay = `(+${weightSum})`;
-            }
-            weightText = ` %c${weightDisplay}`;
+        if (forceWeightDisplay || (typeof weightSum === 'number' && weightSum !== 0)) {
+            const sign = isNegative ? '-' : '+';
+            weightText = ` (${sign}${Math.abs(weightSum)})`;
         }
 
+        const suffixNote = note ? ` %c${note}` : '';
+
         return {
-            text: `%c${label}: %c${matchText}${weightText}`,
-            styles: [logStyles.label, baseStyle, ...(weightText ? [baseStyle] : [])]
+            text: `%c${label}: %c${matchText}%c${weightText}${suffixNote}`,
+            styles: [logStyles.label, baseStyle, baseStyle, ...(note ? [logStyles.info] : [])]
         };
     }
 
