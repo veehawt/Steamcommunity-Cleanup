@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.50
+// @version      0.4.51
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -309,7 +309,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.50';
+    const SCRIPT_VERSION = '0.4.51';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -1280,6 +1280,22 @@
     }
 
     function getDisabledRegexWarnings(patternWeights, useCS2SpecificRegexGlobally) {
+        const warnings = [];
+
+        const cs2Keys = ['weapons', 'finishes', 'wear', 'float', 'stattrak'];
+
+        for (const key of cs2Keys) {
+            const weight = patternWeights?.[key] ?? 0;
+
+            if (weight === 0 && !useCS2SpecificRegexGlobally) {
+                warnings.push({
+                    key,
+                    note: ` [CS2-specific scoring disabled (enableCS2SpecificRegexGlobally = false)]`
+                });
+            }
+        }
+
+        return warnings;
     }
 
     function logKeywordMatches(keywordMatches) {
