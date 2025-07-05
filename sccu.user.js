@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.54
+// @version      0.4.55
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -125,7 +125,7 @@
       )\b`, 'gi');
 
     const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/gi;
-    const regexFloat = /\b(?:0?\.\d{1,9}|1\.0{1,9})\b/g;
+    const regexFloat = /\b0?[.,]\d{1,14}(?!\d)/g;
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
@@ -311,7 +311,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.54';
+    const SCRIPT_VERSION = '0.4.55';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
