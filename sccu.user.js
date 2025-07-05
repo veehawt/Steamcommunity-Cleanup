@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.52
+// @version      0.4.53
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -311,7 +311,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.52';
+    const SCRIPT_VERSION = '0.4.53';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -852,26 +852,6 @@
         return false;
     }
 
-    function isFilteredComment(comment) {
-        if (!isDiscussion) return false;
-
-        if (isBlockedComment(comment)) return false;
-
-        const commentText = comment.querySelector('.commentthread_comment_text');
-        if (!commentText) return false;
-
-        const textClone = commentText.cloneNode(true);
-        textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
-        textClone.querySelectorAll('.btn_darkblue_white_innerfade').forEach(el => el.remove());
-        textClone.querySelectorAll('.dynamiclink_box').forEach(el => el.remove());
-
-        const cleanedText = textClone.textContent.trim();
-        if (!cleanedText) return false;
-
-        const { isMatch } = isRegex(cleanedText, regexFiltersComments);
-        return isMatch;
-    }
-
 
 
     function evaluateTopicFilters(topic, showAll, includeLogs = true) {
@@ -993,6 +973,18 @@
         }, 50);
     }
 
+    function getCleanedCommentText(commentElem) {
+        const commentText = commentElem.querySelector('.commentthread_comment_text');
+        if (!commentText) return '';
+
+        const textClone = commentText.cloneNode(true);
+        textClone.querySelectorAll('blockquote').forEach(bq => bq.remove());
+        textClone.querySelectorAll('.btn_darkblue_white_innerfade').forEach(el => el.remove());
+        textClone.querySelectorAll('.dynamiclink_box').forEach(el => el.remove());
+
+        return textClone.textContent.trim();
+    }
+
     function filterComments(showAll = devMode, showBlocked = false) {
         const locationInfo = getForumLocationInfo();
 
@@ -1006,9 +998,7 @@
 
         comments.forEach(comment => {
             const container = comment.closest('.commentthread_comment_container');
-            if (container && container.id.startsWith('commentthread_Profile_')) {
-                return;
-            }
+            if (container?.id.startsWith('commentthread_Profile_')) return;
 
             if (comment.classList.contains('commentthread_deleted_comment')) {
                 comment.remove();
@@ -1027,42 +1017,31 @@
                 comment.classList.add('blocked-user-comment');
                 comment.style.display = (showAll || showBlocked) ? '' : 'none';
                 reason = 'comment by blocked user';
+
             } else if (hideBlockedCommentQuote && isBlockedCommentQuote(comment)) {
                 comment.classList.add('blocked-user-comment-quote');
                 comment.style.display = (showAll || showBlocked || !hideBlockedCommentQuote) ? '' : 'none';
                 reason = 'comment quoting blocked user';
-            } else if (isFilteredComment(comment)) {
-                comment.classList.add('filtered-regex-comment');
-                comment.style.display = showAll ? '' : 'none';
-                const commentText = comment.querySelector('.commentthread_comment_text');
-                const textClone = commentText?.cloneNode(true);
-                textClone?.querySelectorAll('blockquote')?.forEach(bq => bq.remove());
-                const cleanedText = textClone?.textContent.trim() || '';
 
-                if (!cleanedText) return false;
-                const { regexMatches } = isRegex(cleanedText, regexFiltersComments);
-                reason = regexMatches.length
-                    ? `filtered by regex: ${regexMatches.join(', ')}`
-                    : 'filtered by regex';
             } else {
-                comment.style.display = '';
+                const cleanedText = getCleanedCommentText(comment);
+                const result = isRegex(cleanedText, regexFiltersComments);
+
+                if (result.isMatch) {
+                    comment.classList.add('filtered-regex-comment');
+                    comment.style.display = showAll ? '' : 'none';
+                    isRegexMatch = true;
+                    reason = result.regexMatches.length
+                        ? `filtered by regex: ${result.regexMatches.join(', ')}`
+                        : 'filtered by regex';
+                } else {
+                    comment.style.display = '';
+                }
             }
 
             const commentId = comment.id || comment.dataset.commentid || comment.dataset.id;
             if (devMode && commentId && !loggedComments.has(commentId)) {
-                const rawText = comment.textContent || '';
-                const isRegexMatch = comment.classList.contains('filtered-regex-comment');
-
-                let reason = '';
-                if (!isRegexMatch) {
-                    if (isBlockedComment(comment)) {
-                        reason = 'comment by blocked user';
-                    } else if (hideBlockedCommentQuote && isBlockedCommentQuote(comment)) {
-                        reason = 'comment quoting blocked user';
-                    }
-                }
-
-                logCommentInfo(rawText, isRegexMatch, comment, reason);
+                logCommentInfo(comment, reason);
                 loggedComments.add(commentId);
             }
         });
@@ -1466,36 +1445,36 @@
 
 
 
-    function extractCommentMeta(commentElem, raw, isRegexMatch) {
+    function extractCommentMeta(commentElem, reason = '') {
         const number = commentElem.querySelector('.forum_comment_permlink a')?.textContent.trim() || '??';
         const authorBdi = commentElem.querySelector('.commentthread_author_link bdi');
         const baseName = authorBdi?.childNodes[0]?.textContent?.trim() || 'Unknown';
         const nickname = authorBdi?.querySelector('.nickname_name')?.textContent?.trim();
         const authorName = nickname ? `${baseName} (${nickname})` : baseName;
 
+        const { quotes, comment } = extractCommentText(commentElem.querySelector('.commentthread_comment_text'));
+
         let extra = '';
         let extraStyle = logStyles.label;
 
-        if (isRegexMatch) {
-            const matches = [];
-            for (const [desc, pattern] of [...regexLanguage, ...regexSpam, ...regexTrade]) {
-                const match = raw.match(pattern);
-                if (match) {
-                    matches.push(`${desc}: ${match[0]}`);
-                    break;
-                }
-            }
-            extra = matches.length ? `[Regex] ${matches.join(', ')}` : '[Regex]';
-            extraStyle = logStyles.regex;
-
-        } else if (isBlockedComment(commentElem)) {
+        if (reason === 'comment by blocked user') {
             extra = 'Blocked user';
             extraStyle = logStyles.blocked;
+
+        } else if (reason === 'comment quoting blocked user') {
+            extra = 'Quotes blocked user';
+            extraStyle = logStyles.quoted;
+
+        } else if (reason.startsWith('filtered by regex')) {
+            const cleanedMatchText = reason.replace(/^filtered by regex:?\s*/, '');
+            extra = `[Regex] ${cleanedMatchText}`;
+            extraStyle = logStyles.regex;
         }
 
-        const { quotes, comment } = extractCommentText(commentElem.querySelector('.commentthread_comment_text'));
-        const blockedIds = new Set([...document.querySelectorAll('.commentthread_deleted_expanded[id^="comment_"]')]
-            .map(el => el.id.replace('comment_', '')));
+        const blockedIds = new Set(
+            [...document.querySelectorAll('.commentthread_deleted_expanded[id^="comment_"]')]
+                .map(el => el.id.replace('comment_', ''))
+        );
 
         const quoteBlocks = quotes.map(({ header, body, quotedId }) => {
             const isBlocked = quotedId && blockedIds.has(quotedId);
@@ -1508,7 +1487,8 @@
         });
 
         const formattedComment = comment.replace(/\n{3,}/g, '\n\n');
-        const commentStyle = isBlockedComment(commentElem) || isFilteredComment(commentElem)
+        const commentStyle = commentElem.classList.contains('blocked-user-comment') ||
+            commentElem.classList.contains('filtered-regex-comment')
             ? `${extraStyle} white-space: pre-wrap;`
             : 'white-space: pre-wrap;';
 
@@ -1557,8 +1537,6 @@
                 quoteAuthorDiv.appendChild(document.createTextNode('\n'));
             }
 
-            bq.innerHTML = bq.innerHTML.replace(/([^:\s]):(?!\s)/g, '$1:');
-
             const fullText = bq.textContent.replace(/\n{2,}/g, '\n').trim();
 
             const lines = fullText.split('\n');
@@ -1586,8 +1564,8 @@
         return { quotes, comment };
     }
 
-    function logCommentInfo(raw, isRegexMatch, commentElem) {
-        const meta = extractCommentMeta(commentElem, raw, isRegexMatch);
+    function logCommentInfo(commentElem, reason) {
+        const meta = extractCommentMeta(commentElem, reason);
         const labelParts = buildCommentLabel(meta);
         openStyledGroup(labelParts);
 
