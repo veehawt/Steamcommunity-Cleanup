@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.55
+// @version      0.4.56
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -311,7 +311,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.55';
+    const SCRIPT_VERSION = '0.4.56';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -800,11 +800,11 @@
         return group.some(([_, pattern]) => pattern.test(text));
     }
 
-    function getRegexMatches(text) {
+    function getRegexMatches(text, { excludeTrade = false } = {}) {
         return {
             regexLanguageMatch: shouldCheckLanguage() && matchRegexGroup(text, regexLanguage),
             regexSpamMatch: matchRegexGroup(text, regexSpam),
-            regexTradeMatch: shouldCheckTrade() && matchRegexGroup(text, regexTrade),
+            regexTradeMatch: !excludeTrade && shouldCheckTrade() && matchRegexGroup(text, regexTrade),
         };
     }
 
@@ -854,22 +854,39 @@
         return false;
     }
 
+    function getTopicHoverText(topic) {
+        const rawTooltipHTML = topic.getAttribute('data-tooltip-forum');
+        if (!rawTooltipHTML) return '';
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = rawTooltipHTML;
+
+        const hoverTextDiv = tempDiv.querySelector('.topic_hover_text');
+        return hoverTextDiv ? hoverTextDiv.textContent.trim() : '';
+    }
+
 
 
     function evaluateTopicFilters(topic, showAll, includeLogs = true) {
         const topicName = topic.querySelector('.forum_topic_name');
         if (!topicName) return;
 
-        const text = topicName.textContent.trim();
+        const titleText = normalizeRaw(topicName.textContent);
+        const hoverText = normalizeRaw(getTopicHoverText(topic));
 
-        const { regexLanguageMatch, regexSpamMatch, regexTradeMatch } = getRegexMatches(text);
+        const titleMatches = getRegexMatches(titleText);
+        const hoverMatches = getRegexMatches(hoverText, { excludeTrade: true });
 
-        const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(text, keywords);
+        const regexLanguageMatch = titleMatches.regexLanguageMatch || hoverMatches.regexLanguageMatch;
+        const regexSpamMatch = titleMatches.regexSpamMatch || hoverMatches.regexSpamMatch;
+        const regexTradeMatch = titleMatches.regexTradeMatch;
+
+        const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(titleText, keywords);
 
         const isRegexMatch = regexLanguageMatch || regexSpamMatch || regexTradeMatch;
 
         const tradeResult = isTradeRelated(
-            text,
+            titleText,
             topic,
             {
                 regexLanguageMatch,
