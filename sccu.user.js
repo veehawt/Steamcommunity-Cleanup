@@ -137,7 +137,7 @@
       )\b`, 'gi');
 
     const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/gi;
-    const regexFloat = /\b0?[.,]\d{1,14}(?!\d)/g;
+    const regexFloat = /(?<!\d)[.,]\d{1,14}(?![\d\w])|\b0[.,]\d{1,14}(?![\d\w])/g;
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
