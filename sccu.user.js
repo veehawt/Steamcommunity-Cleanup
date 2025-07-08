@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.56
+// @version      0.4.57
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -55,12 +55,24 @@
         ["Japanese",                                                            /[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]/],
         ["Vietnamese",                                                          /[ảạằắẳẵặỉĩịỏọồốổỗộờớởỡợủũụưừứửữựỷỹỵđ]/i],
         ["Greek",                                                               /[\u0370-\u03FF]/],
-        ["Turkish",                                                             /[ğşçıİĞŞÇ\u0130\u0307]/],
-        ["Turkish, German, Estonian, Finnish, Hungarian (shared diacritics)",   /[ÄäÖöÜü]/],
-        ["Hungarian",                                                           /[ŐőŰű]/],
-        ["Polish",                                                              /[Łł]/],
-        ["Nordic (Danish, Finnish, Icelandic, Norwegian, Swedish)",             /[ÆæØøÅåÞþÐð]/],
+        ["Turkish",                                                             /[ğşı\u0130\u0307]/i],
+        ["Portuguese",                                                          /[ãõ]/i],
+        ["Spanish",                                                             /[ñ]/i],
+        ["Hungarian",                                                           /[őű]/i],
+        ["Polish",                                                              /[ł]/i],
+        ["Turkish, French, Portuguese, Spanish         (shared Latin letter)",  /[ç]/i],
+        ["Turkish, German, Estonian, Finnish, Hungarian  (shared diacritics)",  /[äöü]/i],
+        ["Spanish, Portuguese, Czech, Hungarian, Slovak  (shared diacritics)",  /[áéíóú]/i],
+        ["French, Portuguese                             (shared diacritics)",  /[âô]/i],
+        ["French, Portuguese, Italian                    (shared diacritics)",  /[à]/i],
+        ["French, Portuguese, Italian, Dutch, Romanian   (shared diacritics)",  /[èêëîïùûÿ]/i],
+        ["French, Danish, Icelandic, Norwegian       (shared special letter)",  /[æ]/i],
+        ["Danish, Finnish, Icelandic, Norwegian, Swedish   (special letters)",  /[øåþð]/i],
     ];
+
+    // Set of Unicode characters sometimes used in text-based emoticons
+    // These characters are ignored by language filters and do *not* cause topics or comments to be filtered
+    const smileyCharSet = new Set(['ツ', 'ッ', 'シ', 'ノ', 'ヘ', 'ハ', 'ミ', 'メ', 'Д', 'ಠ', '益', '□', '°']);
 
     // List of regex-based spam patterns to filter from topic titles and comments
     const regexSpam = [
@@ -311,7 +323,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.56';
+    const SCRIPT_VERSION = '0.4.57';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -591,12 +603,20 @@
     }
 
     function isRegex(text, regexList) {
-        const matches = regexList
-            .map(([description, regex]) => {
-                const match = text.match(regex);
-                return match ? `${description}: ${match[0]}` : null;
-            })
-            .filter(Boolean);
+        const matches = [];
+
+        for (const [description, regex] of regexList) {
+            const found = text.match(regex);
+            if (!found) continue;
+
+            const hasNonSmiley = found.some(token =>
+                [...token].some(char => !smileyCharSet.has(char))
+            );
+
+            if (hasNonSmiley) {
+                matches.push(`${description}: ${found[0]}`);
+            }
+        }
 
         return {
             isMatch: matches.length > 0,
@@ -797,7 +817,19 @@
     }
 
     function matchRegexGroup(text, group) {
-        return group.some(([_, pattern]) => pattern.test(text));
+        for (const [_, pattern] of group) {
+            const matches = text.match(pattern);
+            if (!matches) continue;
+
+            const hasNonSmiley = matches.some(token =>
+                [...token].some(char => !smileyCharSet.has(char))
+            );
+
+            if (hasNonSmiley) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function getRegexMatches(text, { excludeTrade = false } = {}) {
@@ -1031,6 +1063,7 @@
             );
 
             let reason = '';
+            let isRegexMatch = false;
 
             if (isBlockedComment(comment)) {
                 comment.classList.add('blocked-user-comment');
@@ -1313,8 +1346,13 @@
         for (const [description, pattern] of regexLanguage) {
             const match = raw.match(pattern);
             if (match) {
-                lines.push(renderMatchLine('language', [`${match[0]} // ${description}`], false, 0, logStyles.regex));
-                break;
+                const isOnlySmileys = match.every(token =>
+                    [...token].every(char => smileyCharSet.has(char))
+                );
+                if (!isOnlySmileys) {
+                    lines.push(renderMatchLine('language', [`${match[0]} // ${description}`], false, 0, logStyles.regex));
+                    break;
+                }
             }
         }
 
