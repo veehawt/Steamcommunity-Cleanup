@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.58
+// @version      0.4.59
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -20,10 +20,6 @@
 (function() {
     'use strict';
 
-    // Hide comments quoting blocked users
-    // Default: false
-    const hideBlockedCommentQuote = false;
-
     // Hide topics with trade-related intent in their titles
     // Note: Trade-related filtering is always disabled in trading forums, regardless of this setting
     // Default: true
@@ -32,6 +28,14 @@
     // Enable Counter-Strike 2 specific regexes (weapons, finishes, wear, float, stattrak) in other Steam forums
     // Default: false
     const enableCS2SpecificRegexGlobally = false;
+    
+    // Hide comments quoting blocked users
+    // Default: false
+    const hideBlockedCommentQuote = false;
+    
+    // If true, comments from friends are exempt from any filtering
+    // Default: false
+    const exemptFriendsFromFiltering = false;
 
     // Keywords to filter from topic titles
     const keywords = [
@@ -323,7 +327,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.58';
+    const SCRIPT_VERSION = '0.4.59';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -886,6 +890,35 @@
         return false;
     }
 
+    function extractSteamIdFromProfileUrl(url) {
+        const match = url.match(/steamcommunity\.com\/(id|profiles)\/([^/]+)/);
+        return match ? match[2] : null;
+    }
+
+    function isUserComment(commentElement, userId) {
+        const authorHref = commentElement.querySelector('.commentthread_author_link')?.href;
+        const authorId = extractSteamIdFromProfileUrl(authorHref);
+        if (!authorId || !userId) return false;
+
+        const isAuthorMatch = authorId === userId;
+
+        const hasEditDelete = commentElement.querySelector('a.forum_comment_action.delete') &&
+            commentElement.querySelector('a.forum_comment_action.edit_post');
+
+        const hasEditTextarea = commentElement.querySelector('textarea[id^="comment_edit_text_"]');
+
+        const emptyActionMenu = (() => {
+            const actionsContainer = commentElement.querySelector('.forum_comment_actions_ctn');
+            return actionsContainer && actionsContainer.children.length === 0;
+        })();
+
+        return isAuthorMatch && (hasEditDelete || hasEditTextarea || emptyActionMenu);
+    }
+
+    function isFriendComment(commentElement) {
+        return !!commentElement.querySelector('.commentthread_comment_friendindicator');
+    }
+
     function getTopicHoverText(topic) {
         const rawTooltipHTML = topic.getAttribute('data-tooltip-forum');
         if (!rawTooltipHTML) return '';
@@ -1037,6 +1070,9 @@
     }
 
     function filterComments(showAll = devMode, showBlocked = false) {
+        const profileUrl = document.querySelector('.user_avatar.playerAvatar')?.href;
+        const userSteamIdOrCustomId = extractSteamIdFromProfileUrl(profileUrl);
+
         const locationInfo = getForumLocationInfo();
 
         if (isDiscussion) {
@@ -1053,6 +1089,16 @@
 
             if (comment.classList.contains('commentthread_deleted_comment')) {
                 comment.remove();
+                return;
+            }
+
+            if (isUserComment(comment, userSteamIdOrCustomId)) {
+                comment.style.display = '';
+                return;
+            }
+
+            if (exemptFriendsFromFiltering && isFriendComment(comment)) {
+                comment.style.display = '';
                 return;
             }
 
