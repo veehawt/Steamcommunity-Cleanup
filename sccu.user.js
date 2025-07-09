@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.59
+// @version      0.4.60
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -28,11 +28,11 @@
     // Enable Counter-Strike 2 specific regexes (weapons, finishes, wear, float, stattrak) in other Steam forums
     // Default: false
     const enableCS2SpecificRegexGlobally = false;
-    
+
     // Hide comments quoting blocked users
     // Default: false
     const hideBlockedCommentQuote = false;
-    
+
     // If true, comments from friends are exempt from any filtering
     // Default: false
     const exemptFriendsFromFiltering = false;
@@ -111,7 +111,8 @@
 
     const regexTradeIntentLight = new RegExp(String.raw`\b(
         |buy(ing?)?|capsules?|case(s)?(?![\s-]*hard(?:ened|end))|downgrades?|upgrades?|crates?|give me|have|want|kato(wice)?|
-        |(?:lf\b|lookin(?:g)?\s+(?:for|4))(?![\s-]*(friends?|more|players?|team(?:mate|mates|m8s)?|mates?|m8s?))|loadout|open|(play[\s-]?)?skins?|rare|sell(ing?)?|stickers?|store|swap|
+        |(?:lf\b|lookin(?:g)?\s+(?:for|4))(?![\s-]*(friends?|more|players?|team(?:mate|mates|m8s)?|mates?|m8s?))|loadout|open|
+        |overpay(ing|s)?|(play[\s-]?)?skins?|rare|sell(ing?)?|stickers?|store|swap|
       )\b`, 'gi');
 
     const regexWeapons = new RegExp(String.raw`\b(
@@ -327,7 +328,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.59';
+    const SCRIPT_VERSION = '0.4.60';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
