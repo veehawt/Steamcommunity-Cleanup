@@ -8,7 +8,7 @@ UserScript that enhances the Steam forums by filtering discussion topics and com
 
 <br/>
 <br/>
-<a href="x">View Demo</a>  
+<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3288209441">View Guide</a>  
 <a href="https://github.com/veehawt/Steamcommunity-Cleanup/issues/new?template=bug_report.md">Report Bug</a>
 <a href="https://github.com/veehawt/Steamcommunity-Cleanup/issues/new?template=feature_request.md">Request Feature</a>
 </p>
