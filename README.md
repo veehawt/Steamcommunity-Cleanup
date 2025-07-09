@@ -2,7 +2,7 @@
 <br/>
 <div align="center">
 
-<h2 align="center">Steamcommunity-Cleanup</h2>
+<h1 align="center">Steamcommunity-Cleanup</h1>
 <p align="center">
 UserScript that enhances the Steam forums by filtering discussion topics and comments.
 
