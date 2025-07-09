@@ -25,7 +25,7 @@ UserScript that enhances the Steam forums by filtering discussion topics and com
 > - Userscripts - [Safari](https://apps.apple.com/us/app/userscripts/id1463298887)
  
 #### Step 2: Install UserScript
-> - Install Steamcommunity-Cleanup by clicking this [link](https://github.com/veehawt/Steamcommunity-Cleanup/raw/master/sccu.user.js)
+> - Install **Steamcommunity-Cleanup** by clicking this [link](https://github.com/veehawt/Steamcommunity-Cleanup/raw/master/sccu.user.js)
 
 
 ### License
