@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.60
+// @version      0.4.61
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -110,8 +110,8 @@
       )\b`, 'gi');
 
     const regexTradeIntentLight = new RegExp(String.raw`\b(
-        |buy(ing?)?|capsules?|case(s)?(?![\s-]*hard(?:ened|end))|downgrades?|upgrades?|crates?|give me|have|want|kato(wice)?|
-        |(?:lf\b|lookin(?:g)?\s+(?:for|4))(?![\s-]*(friends?|more|players?|team(?:mate|mates|m8s)?|mates?|m8s?))|loadout|open|
+        |buy(ing?)?|capsules?|case(s)?(?![\s-]*hard(?:ened|end))|downgrades?|upgrades?|crates?|exchang(es?|ed?|ing)|give me|have|want|
+        |kato(wice)?|(?:lf\b|lookin(?:g)?\s+(?:for|4))(?![\s-]*(friends?|more|players?|team(?:mate|mates|m8s)?|mates?|m8s?))|loadout|open|
         |overpay(ing|s)?|(play[\s-]?)?skins?|rare|sell(ing?)?|stickers?|store|swap|
       )\b`, 'gi');
 
@@ -125,20 +125,20 @@
       )\b`, 'gi');
 
     const regexFinishes = new RegExp(String.raw`\b(
-        |amber[\s-]?fade|amphibious|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
-        |(?:(black|wild)[\s-]?)?lotus|black[\s-]?(pearl|tie)|blood[\s-]?(pressure|sport)?|blue[\s-]?(gem|steel|titanium)|boreal[\s-]?forest|bright[\s-]?water|
+        |amber[\s-]?fade|amphibious|aphrodite|arboreal|arid|asiimov|autotronic|atomic[\s-]?alloy|axia|badlands|big[\s-]?game|(?:black|blue|green|midnight|red)[\s-]?laminate|
+        |(?:(?:black|wild)[\s-]?)?lotus|black[\s-]?(pearl|tie)|blood[\s-]?(pressure|sport)?|blue[\s-]?(gem|steel|titanium)|boreal[\s-]?forest|bright[\s-]?water|
         |bronze(?:[\s-]?morph|d)|buckshot|capillary|cartel|case[\s-]?hard(?:ened|end)|charred|chrome[\s-]?cannon|chromatic[\s-]?abberation|caution|
-        |cobalt(?:[\s-]?skulls)?|commander|conspiracy|constrictor|convoy|cool[\s-]?mint|cmyk|crakow|crimson(?:[\s-]?(kimono|web)?)?|damascus|ddpat|
-        |(desert|scarlet)[\s-]?shamagh|diamond(back)?|(gamma[\s-]?)?dopplers?|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|empress|fade|field[\s-]?agent|
-        |finish[\s-]?line|fever[\s-]?dream|fennec[\s-]?fox|fire[\s-]?serpent|forest|foundation|freehand|fuel[\s-]?injector|giraffe|gold[\s-]?arabesque|
-        |golden(?:[\s-]?(coil|koi))?|green[\s-]?energy|guerrilla|gungir|heat[\s-]?treated|hedge(?:[\s-]?maze)?|hellfire|howl|hot[\s-]?rod|hyper[\s-]?beast|
-        |ice[\s-]?coaled|imperial(?:[\s-]?plaid)?|inheritance|icarus[\s-]?fell|jade|(?:king[\s-]?)?snake(?:bite)?|leather|
-        |(?:lightning|tiger|serpent)[\s-]?strike|long(?:[\s-]?)dog|lore|lunar[\s-]?weave|marble(?:[\s-]?fade)?|mecha[\s-]?industries|mogul|
-        |modern[\s-]?hunter|moss[\s-]?quartz|mangrove|mulberry|needle(?:[\s-]?point)?|neon[\s-]?(revolution|rider)?|night(?:[\s-]?(mare|stripe|wish))?|nocts|
-        |neo[\s-]?noir|ocean[\s-]?drive|omega|overprint|overtake|(?:p\s*([1-4])|phase\s*([1-4]))|pandora(?:'s?[\s-]?box|[\s-]?)?|phosphor|polygon|poseidon|pow|print[\s-]?stream|
-        |(?:queen[\s-]?)?jaguar|radiation[\s-]?hazard|rattler|red[\s-]?line|rub(y|ies)|rust[\s-]?coat|sapphires?|crim[\s-]?z|searing|slate|slaughter|slingshot|smoke[\s-]?out|
-        |(?:snow[\s-])?leopards?|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|starcade|superconductor|(?:silk[\s-]?)?tiger([\s-]?tooth)?|temukau|
-        |tilted|transport|turtle|ultraviolet|unhinged|vanilla|vaporwave|vice|vulcan|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|ibuypower|dignitas|titan|
+        |cobalt(?:[\s-]?skulls)?|commander|(?:consequence(?:\s*of\s*the\s*jinn)?|jinn)|conspiracy|constrictor|convoy|cool[\s-]?mint|cmyk|crakow|(?:crane[\s-]?)?flight|crimson(?:[\s-]?(kimono|web)?)?|
+        |damascus|ddpat|(desert|scarlet)[\s-]?shamagh|diamond(back)?|(gamma[\s-]?)?dopplers?|dragon[\s-]?lore|duct[\s-]?tape|eclipse|emerald(?:[\s-]?web)?|empress|fade|falak|field[\s-]?agent|
+        |finish[\s-]?line|fever[\s-]?dream|fennec[\s-]?fox|fire[\s-]?serpent|forest|foundation|freehand|frosty|fuel[\s-]?injector|(?:fully[\s-]?)?tuned|garden|giraffe|gold[\s-]?arabesque|
+        |golden(?:[\s-]?(coil|koi))?|green[\s-]?energy|guerrilla|gungir|heat[\s-]?treated|hedge(?:[\s-]?maze)?|hellfire|howl|hot[\s-]?rod|hyper[\s-]?beast|ice[\s-]?coaled|imperial(?:[\s-]?plaid)?|
+        |inheritance|icarus[\s-]?fell|jade|(?:king[\s-]?)?snake(?:bite)?|k(?:intsugi|intzugi|inzugi|insugi)|leather|(?:lightning|tiger|serpent)[\s-]?strike|long[\s-]?dog|lore|lunar[\s-]?weave|
+        |marble(?:[\s-]?fade)?|mecha[\s-]?industries|mogul|modern[\s-]?hunter|moss[\s-]?quartz|mangrove|mulberry|needle(?:[\s-]?point)?|neon[\s-]?(revolution|rider)?|night(?:[\s-]?(mare|stripe|wish))?|
+        |nocts|neo[\s-]?noir|occult|ocean[\s-]?drive|omega|overprint|overtake|(?:p\s*[1-4]|phase\s*[1-4])|pandora(?:'s?[\s-]?box|[\s-]?)?|phosphor|pillow\s*punchers|polygon|poseidon|pow|
+        |print[\s-]?stream|(?:queen'?s?[\s-]?)?(?:jaguar|gambit)|radiation[\s-]?hazard|rattler|red[\s-]?line|rub(y|ies)|rust[\s-]?coat|sapphires?|crim[\s-]?z|searing|slate|slaughter|slingshot|
+        |smoke[\s-]?out|(?:sovereign[\s-]?)?flame|(?:snow[\s-]?)?leopards?|solitude|(?:spiral|fatal)\s*glitch|spruce|stained|stratosphere|sunset[\s-]?storm|spearmint|starcade|superconductor|
+        |(?:silk[\s-]?)?tiger(?:[\s-]?tooth)?|temukau|tilted|transport|turtle|ultra[\s-]?violent|ultraviolet|unhinged|vanilla|vaporwave|vice|(?:violet[\s-]?)?beadworks?|vulcan|
+        |(?:wave|cloud)[\s-]?chasers?|whiteout|wildfire|x[-\s]?ray|yellow[\s-]?banded|zebra[\s-]?stripe|ibuypower|dignitas|titan|
       )\b`, 'gi');
 
     const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/gi;
@@ -146,28 +146,28 @@
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
-        |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|advanc(ed?|es?|ing)|advis(ed?|es?|ing)?|advices?|api[\s-]?keys?|animations?|anti[\s-]?cheats?|
+        |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|advanc(ed?|es?|ing)|advis(ed?|es?|ing)?|advices?|api[\s-]?keys?|ancient|animations?|anti[\s-]?cheats?|anubis|
         |apps?|aren'? ?t|isn'? ?t|weren'? ?t|wasn'? ?t|won'? ?t|wouldn'? ?t|couldn'? ?t|shouldn'? ?t|didn'? ?t|doesn'? ?t|don'? ?t|can'? ?t|hasn'? ?t|hadn'? ?t|mustn'? ?t|
         |artists?|attempt(ed|ing|s)?|attention|authentic(at(ed|es|ing|ions?|ors?))?|available(?![\s-]?for trade)|back|badges?|ban(ned|ning|s)?|because|(been|has) limited|best|
-        |black screen|(bring|brought) back|bind(ed|ing|s)?|blank(s|ed|ing)?|bound(ed)?|broken(?![\s-]?fang)|brows(ed?|ers?|ing)?|bugs?|builds?|but|can (I|you)|cannot|casuals?|
+        |black screen|(bring|brought) back|bind(ed|ing|s)?|blank(s|ed|ing)?|bound(ed)?|broken(?![\s-]?fang)|brows(ed?|ers?|ing)?|bugs?|builds?|but|cache|can (I|you)|cannot|casuals?|
         |chang(e|es|ing)|clans?|clients?|commands?|com(?:munit(?:y|ies)|m{1,2}s?|municat(?:e[ds]?|ing))|confessions?|confirm(ed|ing|s)?|consoles?|countr(ies|y)|crash(ed|es)?|created|
         |crosshairs?|custom(i[sz](ation|ing)s?|s)?|deceiv(ed|es|ing)|deleted?|desktop|detect(ed|ion(s)?|s)|disappear(ed|ing|s)?|discussions?|dlcs?|do(es)? (I|you)?|drop(ping|s)?|
-        |duos?|trios?|quads?|elos?|error|extend(?:ed|s|ion|ions)?|f2p|free2play|free[\s-]?to[\s-]?play|faceit|fail(ings?|s)?|fak(ed?|es?|ing)|favo(u)?rit(e|ed|es|ing)|feedbacks?|
+        |duos?|trios?|quads?|elos?|dust2?|error|extend(?:ed|s|ion|ions)?|f2p|free2play|free[\s-]?to[\s-]?play|faceit|fail(ings?|s)?|fak(ed?|es?|ing)|favo(u)?rit(e|ed|es|ing)|feedbacks?|
         |filter(ed|ing|s)?|fix(ed|es)?|for \d+ days|forums?|fps|friends?|freez(es?|ing)|fresh|gam(e(s)?|ing)|game store|glitch(ed|es|ing)?|gpus?|groups?|hard[\s-]?stuck|
         |hat(e(d|s)?|er(s)?|ful(ly)?|ing|red)|help(ed|full?|ing|s)?|hid(e|ing)|hi(gh)?jack(ed|ing|s)|histor(y|ies)|hold(ings?|s)?|hop(e|ing)|host(ile|ings?|ed|s)?|how (can|do)?|
-        |(I )?opened|icons?|idea|improv(ement(s)?|ing)|info(rmation)?s?|install(ed|ing|s)?|invalid|is (it|there)|issues?|lags?|languages?|let (me|us)|(?:re)?load(?:ing)?|
-        |lik(ed?|es?|ing)?|locati(ons?|ng)|(?:un)?lock(?:ed|s|ing)?|lost|lov(ed?|es?|ing)?|made|match(es|ing)?|matchmaking|mm|memor(ies|y)|menus?|messag(ed?|es?|ing)?|msgs?|
-        |miss(ed|es|ing)?|mod(ded|ding|s|erators?)|monitor(ed|ing|s)?|multiplayer|mute(d|s)?|name|network(ing|s)?|no trad(e|es|ing)|noises?|not|opinions?|option(al|s)?|or not|
+        |(I )?opened|icons?|idea|improv(ement(s)?|ing)|inferno|info(rmation)?s?|install(ed|ing|s)?|invalid|is (it|there)|issues?|lags?|languages?|let (me|us)|(?:re)?load(?:ing)?|
+        |lik(ed?|es?|ing)?|locati(ons?|ng)|(?:un)?lock(?:ed|s|ing)?|lost|lov(ed?|es?|ing)?|made|match(es|ing)?|matchmaking|mm|memor(ies|y)|menus?|messag(ed?|es?|ing)?|msgs?|mirage|
+        |miss(ed|es|ing)?|mod(ded|ding|s|erators?)|monitor(ed|ing|s)?|multiplayer|mute(d|s)?|name|network(ing|s)?|no trad(e|es|ing)|noises?|not|nuke|opinions?|option(al|s)?|or not|overpass|
         |pag(ed?|es?|ing)?|patch(es|ing)?|pc|people|permission|person(al(ly)?|as?|s)?|phones?|players?|point shop|polic(ing|y|ies)|possibl(e|y)|practice|pre[\s-]?mades?|prem(iere?)?|
         |prices?|prime|privacy|problems?|profiles?|questions?|rant(ing)?|rat(e(s)?|ing(s)?)|receiv(e|ed|ing)|recruiting|refund(able|ings?|ed|er|es)?|remove(d|s)?|report(ed|ing|s)?|
         |reset(s|ted|ting)?|resolutions?|resolv(e|es|ing)|restart(ed|ing|s)?|revamps?|reward(ed|ing|s)?|rules|scam(?:s|med|mer)?|stolen|scrim(?:s|z)?|scrimmages?|should|show(ings?|s)?|
         |(?<!\b(?:buy|sell|gift)(?:ing)?\s)(some(?:body|one|thing))(?!\s(?:buy|sell|gift)(?:ing)?\b)|some(how|what|where)|sounds?|sources?|suggestions?|together|
         |restrict(ed|ing|ions?|s)?|rever(ses?|sal|ted|ts?|ting)|rework(ed|ing|s)?|run(ning|s)?|settings?|should I|sort(ing|s)?|specific|steam(?:[\s-]?(guard|vr))?|servers?|
         |showcas(ed?|es?|ing)|sold|stacks?|stop|store page|strats?|stretched|stuck|systems?|tactics?|team(?:mate|mates|m8s)?|mates?|m8s?|thoughts?|tickets?|to play\s+.+?(?:\s+with)?|
-        |training|troll(ed|ing|s)?|tr(ied|ies?|ying?|ys?)|tutorials?|unable|unauthorized|unavailable|unbans?|uninstall(ed|ing|s)?|unknow(ing(ly)?|ns?)?|updates?|
-        |unexpected|us(e|es|ers|ing)|vac|valve|version(ing|s)?|view(ed|ing|models?|s)?visual(ly|s)?|wait(ing)? time|warnings?|we|what|when|where|which|who|why|wingman|wish(ed|s)?|
+        |train(?:s|ed|ing)?|troll(ed|ing|s)?|tr(ied|ies?|ying?|ys?)|tutorials?|unable|unauthorized|unavailable|unbans?|uninstall(ed|ing|s)?|unknow(ing(ly)?|ns?)?|updates?|
+        |unexpected|us(e|es|ers|ing)|vac|valve|version(ing|s)?|vertigo|view(ed|ing|models?|s)?visual(ly|s)?|wait(ing)? time|warnings?|we|what|when|where|which|who|why|wingman|wish(ed|s)?|
         |wishlist(ed|ing|s)?|work(ed|ing|s|shop)?|worst|(?:it[\s,]+worth|worth[\s,]+it)(?![\s-]?of)|worth(?:less(?:ly)?|while|y)|would you|
-        |(?<!https steamcommunity\.com tradeoffer )\bnews?\b(?!\s+(kni(fe|ve)(s|z)?|glove(s|z)?|skins?))
+        |(?<!https steamcommunity\.com tradeoffer )\bnews?\b(?!\s+(kni(fe|ve)(s|z)?|glove(s|z)?|skins?))|
       )\b`, 'gi');
 
 
@@ -187,13 +187,13 @@
             border-radius: 2px;
             border: none;
             width: 112px;
-            height: 17px;
+            height: 20px;
             padding: 0px 16px;
             background: rgba(103, 193, 245, 0.2);
             cursor: pointer;
             text-decoration: none !important;
             color: #67c1f5 !important;
-            line-height: 17px;
+            line-height: 20px;
         }
         .header_all.active,
         .header_blocked.active,
@@ -268,12 +268,20 @@
             position: relative;
             display: flex;
             justify-content: space-between;
-            line-height: 25px;
-            height: 25px;
+            align-items: center;
+            line-height: unset;
+            min-height: 20px;
             background-color: rgba(21, 31, 44, 0.7);
             color: #56707f;
-            padding: 0px 6px;
         }
+        .forum_paging_header_extended,
+        .forum_paging_pagectn_extended {
+            padding: 0 6px 6px;
+        }
+        .forum_paging_footer_extended,
+        .forum_paging_fpagectn_extended {
+            padding: 6px 6px 0;
+         }
         .forum_paging_header,
         .forum_paging_pagectn {
             border-bottom-left-radius: 0;
@@ -328,7 +336,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.60';
+    const SCRIPT_VERSION = '0.4.61';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -1155,28 +1163,35 @@
 
     function filterOP(showAll = devMode, showBlocked = false) {
         const opWrapper = document.querySelector('.forum_op');
-        const blockedHiddenPost = document.querySelector('.forum_op [id^="forum_op_hidden_"]');
-        const blockedHiddenPostToggle = document.querySelector('.forum_op [id^="forum_op_showhidden_"]');
-        const blockedHiddenPostUnhide = document.querySelector('.forum_op .commentthread_show_deleted_link');
+        if (!opWrapper) return;
 
-        if (blockedHiddenPostUnhide && blockedHiddenPost && blockedHiddenPostToggle) {
-            const isBlockedOP = getComputedStyle(blockedHiddenPostToggle).display !== 'none';
+        const blockedHiddenPostHeader = opWrapper.querySelector('[id^="forum_op_header_"]');
+        const blockedHiddenPostTopic = opWrapper.querySelector('[id^="forum_op_topic_"]');
+        const blockedHiddenPostContent = opWrapper.querySelector('[id^="forum_op_content_"]');
+        const blockedHiddenPostToggle = opWrapper.querySelector('[id^="forum_op_showhidden_"]');
+        const blockedHiddenPostUnhide = blockedHiddenPostToggle?.querySelector('.commentthread_show_deleted_link');
 
-            blockedHiddenPostUnhide.addEventListener('click', () => {
-                opWrapper.classList.add('blocked-user-OP');
-            });
+        if (!blockedHiddenPostToggle || !blockedHiddenPostUnhide) return;
 
-            if (isBlockedOP) {
-                if (showAll || showBlocked) {
-                    blockedHiddenPostUnhide.click(); // Simulate Steam's "Show"
-                    opWrapper.classList.add('blocked-user-OP');
-                }
-            } else {
-                if (!(showAll || showBlocked)) {
-                    blockedHiddenPost.style.setProperty('display', 'none', 'important');
-                    blockedHiddenPostToggle.style.removeProperty('display');
-                    opWrapper.classList.remove('blocked-user-OP');
-                }
+        const isBlockedOP = getComputedStyle(blockedHiddenPostToggle).display !== 'none';
+
+        blockedHiddenPostUnhide.addEventListener('click', () => {
+            opWrapper.classList.add('blocked-user-OP');
+        });
+
+        if (isBlockedOP) {
+            if (showAll || showBlocked) {
+                blockedHiddenPostUnhide.click(); // Simulate Steam's "Show"
+            }
+        } else {
+            if (!(showAll || showBlocked)) {
+                blockedHiddenPostHeader.style.display = 'none';
+                blockedHiddenPostTopic.style.display = 'none';
+                blockedHiddenPostContent.style.display = 'none';
+
+                blockedHiddenPostToggle.style.display = '';
+
+                opWrapper.classList.remove('blocked-user-OP');
             }
         }
     }
