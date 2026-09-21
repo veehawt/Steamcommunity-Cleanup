@@ -56,7 +56,7 @@ This guide explains how to install **Steamcommunity-Cleanup** within the Steam c
 - Wait a few seconds for the ScriptCat interface to open, then click the **⚙️ Settings** icon
 - Read or skip the tutorial
 - In the top-right corner, hover over **Create Script** and select **Link Import**
-- Enter the URL of the **Steamcommunity-Cleanup** (`https://github.com/veehawt/Steamcommunity-Cleanup/raw/master/sccu.user.js`) script and proceed with the installation
+- Enter the URL of the **Steamcommunity-Cleanup** `https://github.com/veehawt/Steamcommunity-Cleanup/raw/master/sccu.user.js` script and proceed with the installation
 
 #### Step 5: Edit the script
 
