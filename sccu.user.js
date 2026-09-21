@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.61
+// @version      0.4.62
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -336,7 +336,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.61';
+    const SCRIPT_VERSION = '0.4.62';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -900,8 +900,9 @@
     }
 
     function extractSteamIdFromProfileUrl(url) {
-        const match = url.match(/steamcommunity\.com\/(id|profiles)\/([^/]+)/);
-        return match ? match[2] : null;
+        if (!url) return null;
+        const match = url.match(/steamcommunity\.com\/(?:id|profiles)\/([^/?#]+)/);
+        return match ? match[1] : null;
     }
 
     function isUserComment(commentElement, userId) {
