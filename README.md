@@ -16,10 +16,9 @@ UserScript that enhances the Steam forums by filtering discussion topics and com
 
 ## Table of Contents
 
-Choose where to install:
-
-- [Steam Client](#installation-in-the-steam-client)
-- [Web Browser](#installation-in-a-web-browser)
+- [Steam Client Installation](#installation-in-the-steam-client)
+- [Steam Client Update](#updating-in-the-steam-client)
+- [Web Browser Installation](#installation-in-a-web-browser)
 
 <br/>
 
@@ -68,6 +67,15 @@ Once you have finished configuring the script, you can close the Chrome window a
 
 > [!CAUTION]
 > If you run into an issue where Steam stops responding or loads indefinitely, press <kbd>Win</kbd> + <kbd>R</kbd> and enter `%LocalAppData%\Steam\htmlcache`. Delete everything in the folder and restart the Steam client.
+
+<br/>
+
+## Updating in the Steam Client
+
+- Open a new tab in the Steam client by by right-clicking any link within Steam and selecting **_Open link in new tab_**
+- In the new Steam browser tab, select the **address bar**
+- Enter `https://github.com/veehawt/Steamcommunity-Cleanup/raw/master/sccu.user.js` and press <kbd>Enter</kbd>
+- Click **Update Script** when automatically prompted by ScriptCat
 
 <br/>
 
