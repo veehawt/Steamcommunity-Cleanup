@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.6.0
+// @version      0.6.1
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -336,7 +336,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.6.0';
+    const SCRIPT_VERSION = '0.6.1';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -436,8 +436,8 @@
         return content
             .toLowerCase()
             .normalize("NFKD") // strip accents and diacritics
-            .replace(/[^\p{ASCII}]/gu, ' ') // replace all non-ASCII characters (emojis, special symbols, etc.)
-            .replace(/[^\p{L}\p{N}\s\-\.,?]/gu, ' ') // replace everything but letters, numbers, spaces, hypens, periods, commas and question marks
+            .replace(/[^\p{ASCII}$€£¥]/gu, ' ') // replace all non-ASCII characters (emojis, special symbols, etc.) but keep common currency
+            .replace(/[^\p{L}\p{N}\s\-\.,?$€£¥]/gu, ' ') // replace everything but letters, numbers, spaces, hyphens, periods, commas, question marks, question marks and currency symbols
             .replace(/\s+/g, ' ') // collapse whitespaces
             .trim()
     }
