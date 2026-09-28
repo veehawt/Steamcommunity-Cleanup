@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.5.0
+// @version      0.6.0
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -95,8 +95,7 @@
         ["free keyword combination",                 /\bfree\s+(?:cases?|gloves?|items?|k(?:nife|nives|nifes)|points|skins?)\b/i],
         ["WTB/WTS/WTT disguised spacing",            /\b[^\w\s]*(?:w\s*t\s*b|w\s*t\s*s|w\s*t\s*t)[^\w\s]*\b/i],
         ["H/W (have/want) variants with brackets",   /\b[\[\(\{\<\-\*\_]?([hw])[\]\)\}\>\-\*\_]?(\b|(?=\W))(?!\/)/i],
-        ["open inventory/trade",                     /\bopen (?:inventory|inv|trade)\b/i],
-        ["currency pre-/suffix: $10k, €1.2k, 2000$", /(?:\d{1,3}(?:[.,]\d{1,3})?k\s*(?:€|\$|£|¥|usd|euro)|(?:€|\$|£|¥|usd|euro)\s*\d{1,3}(?:[.,]\d{1,3})?k|\d{1,6}\s*(?:€|\$|£|¥|usd|euro)|(?:€|\$|£|¥|usd|euro)\s*\d{1,6})/i]
+        ["open inventory/trade",                     /\bopen (?:inventory|inv|trade)\b/i]
     ];
 
 
@@ -145,6 +144,7 @@
     const regexFloat = /(?<!\d)[.,]\d{1,14}(?![\d\w])|\b0[.,]\d{1,14}(?![\d\w])/g;
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
     const regexTradeLink = /steamcommunity\.com\/(tradeoffer\/new|trade\/\d+)\b/i;
+    const regexTradeCurrency = /(?:\d{1,3}(?:[.,]\d{1,3})?k\s*(?:€|\$|£|¥|usd|euro)|(?:€|\$|£|¥|usd|euro)\s*\d{1,3}(?:[.,]\d{1,3})?k|\d{1,6}\s*(?:€|\$|£|¥|usd|euro)|(?:€|\$|£|¥|usd|euro)\s*\d{1,6})/gi;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
         |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|advanc(ed?|es?|ing)|advis(ed?|es?|ing)?|advices?|api[\s-]?keys?|ancient|animations?|anti[\s-]?cheats?|anubis|
@@ -336,7 +336,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.5.0';
+    const SCRIPT_VERSION = '0.6.0';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -373,7 +373,8 @@
         finishes: regexFinishes,
         wear: regexWear,
         float: regexFloat,
-        stattrak: regexStatTrak
+        stattrak: regexStatTrak,
+        currency: regexTradeCurrency
     };
 
     const fuzzyRegexTermsByKey = Object.fromEntries(
@@ -409,6 +410,7 @@
             float: 3,
             stattrak: 2,
             tradelink: 4,
+            currency: 2,
         };
 
         if (!useCS2SpecificRegexGlobally) {
@@ -1459,7 +1461,7 @@
     }
 
     function logTradeMatches(matchedByKey, scoreByKey, patternWeights, useCS2SpecificRegexGlobally) {
-        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'tradelink', 'negatives'];
+        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'tradelink', 'currency', 'negatives'];
         const lines = [];
 
         const disabledNotes = getDisabledRegexWarnings(patternWeights, useCS2SpecificRegexGlobally);
@@ -1543,7 +1545,7 @@
             useCS2SpecificRegexGlobally
         });
 
-        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'tradelink', 'negatives'];
+        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'tradelink', 'currency', 'negatives'];
         const hasTradeMatches = tradeKeys.some(
             key => (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
         );
