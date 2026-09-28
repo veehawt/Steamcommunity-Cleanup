@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steamcommunity-Cleanup
 // @namespace    https://github.com/veehawt/Steamcommunity-Cleanup
-// @version      0.4.62
+// @version      0.5.0
 // @description  UserScript that enhances the Steam forums by filtering discussion topics and comments.
 // @author       vee (https://github.com/veehawt | https://steamcommunity.com/profiles/76561197969754818)
 // @supportURL   https://github.com/veehawt/Steamcommunity-Cleanup/issues
@@ -144,6 +144,7 @@
     const regexWear = /\b(factory new|fn|minimal wear|mw|field[-\s]?tested|ft|well[-\s]?worn|ww|battle[-\s]?scarred|bs|float)\b/gi;
     const regexFloat = /(?<!\d)[.,]\d{1,14}(?![\d\w])|\b0[.,]\d{1,14}(?![\d\w])/g;
     const regexStatTrak = /\b(stat[\s\-]?trak|stat[\s\-]?track)\b/gi;
+    const regexTradeLink = /steamcommunity\.com\/(tradeoffer\/new|trade\/\d+)\b/i;
 
     const regexTradeNegatives = new RegExp(String.raw`\b(
         |(1|2|3|4|5)[\s-]?v(?:s\.?|s)?[\s-]?(1|2|3|4|5)|abilit(y|ies)|access|add(ition)?|advanc(ed?|es?|ing)|advis(ed?|es?|ing)?|advices?|api[\s-]?keys?|ancient|animations?|anti[\s-]?cheats?|anubis|
@@ -246,7 +247,6 @@
         .filtered-regex-comment {
             background-color: rgba(67, 47, 67, 0.5) !important;
         }
-
         .filtered-trade-related {
             background-color: rgba(44, 165, 141, 0.5) !important;
         }
@@ -336,7 +336,7 @@
     };
 
 
-    const SCRIPT_VERSION = '0.4.62';
+    const SCRIPT_VERSION = '0.5.0';
     const devMode = false;
     const tradeCheckCache = new Map();
     const loggedComments = new Set();
@@ -408,6 +408,7 @@
             wear: 3,
             float: 3,
             stattrak: 2,
+            tradelink: 4,
         };
 
         if (!useCS2SpecificRegexGlobally) {
@@ -637,7 +638,11 @@
         };
     }
 
-    function analyzeTradeMatch(content, skipFuzzy) {
+    function hasTradeLink(rawText) {
+        return regexTradeLink.test(rawText);
+    }
+
+    function analyzeTradeMatch(content, skipFuzzy, hasTradeLink = false) {
         const normalized = normalizeContent(content);
 
         const {
@@ -645,7 +650,7 @@
             breakdown,
             matchedByKey,
             fuzzyMatchByKey
-        } = getTradeConfidenceScore(normalized, skipFuzzy);
+        } = getTradeConfidenceScore(normalized, skipFuzzy, hasTradeLink);
 
         return {
             isTrade: score >= 3,
@@ -658,20 +663,22 @@
         };
     }
 
-    function isTradeRelated(content, topic = null, regexMatches = {}, keywordMatches = [], skipFuzzy = false) {
+    function isTradeRelated(content, topic = null, regexMatches = {}, keywordMatches = [], skipFuzzy = false, tradeLinkMatch = false) {
         if (isTradingForum && !devMode) return false;
 
-        const cacheKey = `${content}::${skipFuzzy ? 'nofuzzy' : 'full'}`;
+        const cacheKey = `${content}::${skipFuzzy ? 'nofuzzy' : 'full'}::${tradeLinkMatch ? 'link' : 'nolink'}`;
         if (tradeCheckCache.has(cacheKey)) {
             return tradeCheckCache.get(cacheKey);
         }
 
-        const result = analyzeTradeMatch(content, skipFuzzy);
+        const result = analyzeTradeMatch(content, skipFuzzy, tradeLinkMatch);
+        const isTrade = result.isTrade;
 
         let output;
         if (devMode) {
             output = getDebugResult({
                 ...result,
+                isTrade,
                 raw: normalizeRaw(content),
                 regexLanguageMatch: regexMatches.regexLanguageMatch,
                 regexSpamMatch: regexMatches.regexSpamMatch,
@@ -682,7 +689,7 @@
                 useCS2SpecificRegexGlobally
             });
         } else {
-            output = result.isTrade;
+            output = isTrade;
         }
 
         tradeCheckCache.set(cacheKey, output);
@@ -690,7 +697,7 @@
     }
 
 
-    function getTradeConfidenceScore(normalized, skipFuzzy = false) {
+    function getTradeConfidenceScore(normalized, skipFuzzy = false, hasTradeLink = false) {
         const patternWeights = getPatternWeights();
 
         const scoreBreakdown = {};
@@ -804,6 +811,16 @@
 
             scoreBreakdown[key] = { count: exactCount, fuzzyCount, groupScore };
             totalScore += groupScore;
+        }
+
+        const tradeLinkWeight = patternWeights.tradelink || 0;
+        if (hasTradeLink) {
+            matchedByKey.tradelink = ['yes'];
+            scoreBreakdown.tradelink = { count: 1, fuzzyCount: 0, groupScore: tradeLinkWeight };
+            totalScore += tradeLinkWeight;
+        } else {
+            matchedByKey.tradelink = [];
+            scoreBreakdown.tradelink = { count: 0, fuzzyCount: 0, groupScore: 0 };
         }
 
         return {
@@ -959,6 +976,7 @@
         const { isMatch: isKeywordMatch, keywordMatches } = isKeywords(titleText, keywords);
 
         const isRegexMatch = regexLanguageMatch || regexSpamMatch || regexTradeMatch;
+        const tradeLinkMatch = shouldCheckTrade() && (hasTradeLink(titleText) || hasTradeLink(hoverText));
 
         const tradeResult = isTradeRelated(
             titleText,
@@ -969,12 +987,14 @@
                 regexTradeMatch
             },
             keywordMatches,
-            includeLogs
+            includeLogs,
+            tradeLinkMatch
         );
 
         const isTrade = typeof tradeResult === 'object' ? tradeResult.isTrade : tradeResult;
 
         topic.dataset.tradeMatch = isTrade;
+        topic.dataset.tradeLinkMatch = tradeLinkMatch;
         topic.dataset.regexMatch = isRegexMatch;
         topic.dataset.regexLanguageMatch = regexLanguageMatch;
         topic.dataset.regexSpamMatch = regexSpamMatch;
@@ -1439,7 +1459,7 @@
     }
 
     function logTradeMatches(matchedByKey, scoreByKey, patternWeights, useCS2SpecificRegexGlobally) {
-        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
+        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'tradelink', 'negatives'];
         const lines = [];
 
         const disabledNotes = getDisabledRegexWarnings(patternWeights, useCS2SpecificRegexGlobally);
@@ -1523,14 +1543,15 @@
             useCS2SpecificRegexGlobally
         });
 
-        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'negatives'];
+        const tradeKeys = ['intent', 'intentlight', 'finishes', 'weapons', 'wear', 'float', 'stattrak', 'tradelink', 'negatives'];
         const hasTradeMatches = tradeKeys.some(
             key => (matchedByKey[key]?.length || 0) + (fuzzyMatchByKey[key]?.length || 0) > 0
         );
 
         if (hasTradeMatches) {
-            const scoreColor = score >= 3 ? logStyles.trade : logStyles.default;
-            const qualitativeColor = score >= 3 ? logStyles.trade : logStyles.default;
+            const scoreColor = isTrade ? logStyles.trade : logStyles.default;
+            const qualitativeColor = isTrade ? logStyles.trade : logStyles.default;
+
             lines.push({
                 text: `%cTrade-related score: %c${score} %c- %c${confidence}`,
                 styles: [logStyles.label, scoreColor, logStyles.label, qualitativeColor]
